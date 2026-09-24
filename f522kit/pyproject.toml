@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f522kit"
+version = "0.2.3rc2"
+description = "Nonlinear modeling on anonymous core980 features: frozen data reader, rolling-anchor harness, and canonical evaluator"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+lgbm = ["lightgbm>=4.0"]
+torch = ["torch>=2.1"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+f522kit = "f522kit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
