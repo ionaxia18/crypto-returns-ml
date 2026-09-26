@@ -15,9 +15,14 @@
 #SBATCH --time=48:00:00
 #SBATCH --output=logs/%x-%j.out
 
+# The venv was built from Sherlock's python/3.12.1 module, which provides
+# libpython3.12.so; without it the venv's python cannot start. Loaded before
+# `set -u` because Lmod's shell functions reference unset variables.
+module load devel python/3.12.1
+
 set -euo pipefail
 
-VENV="${VENV:-$SCRATCH/core980-work/venv}"   # edit if your venv lives elsewhere
+VENV="${VENV:-$SCRATCH/core980-work/.venv}"
 DATA_ROOT="${DATA_ROOT:-/oak/stanford/projects/ruizhe-share/student_core980/data/core980_h30}"
 OUT="${OUT:-runs/linear_4w}"
 
@@ -28,6 +33,7 @@ export MKL_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 
 cd "$SLURM_SUBMIT_DIR"
 echo "host=$(hostname) out=$OUT start=$(date -Is)"
+echo "python=$(which python) f522kit=$(which f522kit)"
 f522kit run --data "$DATA_ROOT" --model models/ridge.py:MyModel \
             --out "$OUT" --stride 4w --row-budget 1000000 --seed 0 "$@"
 echo "end=$(date -Is)"
