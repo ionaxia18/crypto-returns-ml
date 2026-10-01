@@ -3,4 +3,4 @@
 # Submit: scripts/submit_experiment.sh experiments/models_v1.txt
 ridge       ridge  {}
 lgbm_base   lgbm   {}
-mlp_base    mlp    {}
+mlp_base    mlp    {"in_ram": false}   # stride-5 train X is ~45 GB: stream it

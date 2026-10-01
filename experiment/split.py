@@ -19,7 +19,7 @@ measure what the subsampling costs (README roadmap stage 2).
 
 Calendar, exclusions and decay come from the kit (``resolve_schedule``,
 ``Anchor``) so they cannot drift from the contract. Train rows are read
-minute by minute from the [1440, S, K] memmap, so stride 15 reads ~1/15
+minute by minute from the [1440, S, K] memmap, so stride 5 reads ~1/5
 of each training shard.
 
 This reads shards directly and caches labels: fine for private tooling,
@@ -62,7 +62,9 @@ from f522kit.driver import KIT_VERSION, resolve_schedule
 SPLIT_VERSION = 2
 VAL_AFTER = datetime.date(2024, 4, 1)
 TRAIN_WEEKS = 26
-MINUTE_STRIDE = 15
+# Stride 5 chosen from experiment/checks/stride_test.py (26w, anchor 2024-04-14):
+# ridge APS 1.64 bps at stride 5 vs 1.71 at stride 1 (96%) and 1.46 at 15.
+MINUTE_STRIDE = 5
 WRITE_CHUNK_ROWS = 32_768  # bounds per-worker RAM (~128 MB of X at K=980)
 
 

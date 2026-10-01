@@ -7,7 +7,7 @@
 #   SPLIT=$SCRATCH/core980-work/experiment/s5 sbatch scripts/experiment_build.sbatch --minute-stride 5
 #
 # Extra arguments are passed through to `python -m experiment.split`.
-# Disk: ~16 GB train + ~36 GB val at the defaults (26 weeks, stride 15).
+# Disk: ~45 GB train (~11.4M rows) + ~35 GB val at the defaults (26 weeks, stride 5).
 # --workers defaults to --cpus-per-task; each worker holds <= ~130 MB.
 #SBATCH --job-name=experiment_build
 #SBATCH --partition=normal

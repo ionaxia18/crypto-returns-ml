@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ridge at minute strides 30/15/5/1 on the experiment split's dates, one data pass
-# (experiment/checks/stride_test.py). Answers: does the default stride 15 cost APS?
+# (experiment/checks/stride_test.py). Answers: what does thinning minutes cost APS?
 #
 # Submit from the repo root (CPU/memory/time are overridable on the command line):
 #   mkdir -p logs results
@@ -9,11 +9,14 @@
 #
 # Extra arguments are passed through to `python -m experiment.checks.stride_test`.
 # Memory: ~(readers + 1) x 1.3 GB of shards + 4 x 7.7 MB Gram matrices.
+# The 2-week smoke run took ~6 s per training date at 16 CPUs, so 26 weeks
+# should take ~20 min. A short
+# --time starts sooner: SLURM backfills short jobs into idle gaps.
 #SBATCH --job-name=stride_test
 #SBATCH --partition=normal
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=48G
-#SBATCH --time=04:00:00
+#SBATCH --mem=32G
+#SBATCH --time=01:00:00
 #SBATCH --output=logs/%x-%j.out
 
 # See run_linear.sbatch: the venv needs Sherlock's python/3.12.1 module.
