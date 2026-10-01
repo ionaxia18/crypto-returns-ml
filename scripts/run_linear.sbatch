@@ -30,6 +30,9 @@ source "$VENV/bin/activate"
 export OMP_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export OPENBLAS_NUM_THREADS="$SLURM_CPUS_PER_TASK"
 export MKL_NUM_THREADS="$SLURM_CPUS_PER_TASK"
+# Flush Python output line by line; otherwise a job killed at its time limit
+# loses buffered progress lines and the log looks empty.
+export PYTHONUNBUFFERED=1
 
 cd "$SLURM_SUBMIT_DIR"
 echo "host=$(hostname) out=$OUT start=$(date -Is)"

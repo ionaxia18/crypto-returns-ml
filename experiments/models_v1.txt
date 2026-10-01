@@ -1,0 +1,6 @@
+# Experiment-split comparison of the three model families at default settings.
+# One run per line: name  model  {json constructor kwargs}
+# Submit: scripts/submit_experiment.sh experiments/models_v1.txt
+ridge       ridge  {}
+lgbm_base   lgbm   {}
+mlp_base    mlp    {}

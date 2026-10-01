@@ -11,6 +11,9 @@ statistics, and solves the normalized ridge system:
 ``w_train`` from the kit already includes the half-life decay and zero-weight
 rows are already dropped, so no extra masking or decay is applied here.
 
+``fit_arrays`` is the same estimator on in-memory/memmapped arrays, used by
+the private experiment-split harness (``experiment``).
+
 Run:
     f522kit run --data $DATA_ROOT --model models/ridge.py:MyModel \
                 --out runs/linear_4w --stride 4w --row-budget 1000000 --seed 0
@@ -32,7 +35,20 @@ def ridge_solve(XX: np.ndarray, XY: np.ndarray, lam: float = LAMBDA) -> np.ndarr
     return beta_n / d
 
 
+def accumulate(XX: np.ndarray, XY: np.ndarray, X, y, w) -> None:
+    """Add one block's weighted sufficient statistics in place (float64)."""
+    for s in range(0, y.shape[0], CHUNK_ROWS):
+        x = np.asarray(X[s:s + CHUNK_ROWS], dtype=np.float64)
+        yc = np.asarray(y[s:s + CHUNK_ROWS], dtype=np.float64)
+        xw = x * w[s:s + CHUNK_ROWS, None]
+        XX += xw.T @ x
+        XY += xw.T @ yc
+
+
 class MyModel:
+    def __init__(self, lam: float = LAMBDA):
+        self.lam = lam
+
     def fit(self, train):
         XX = XY = None
         for block in train.iter_dates():
@@ -40,16 +56,23 @@ class MyModel:
                 k = block.x.shape[1]
                 XX = np.zeros((k, k))
                 XY = np.zeros(k)
-            for s in range(0, block.y.shape[0], CHUNK_ROWS):
-                x = np.asarray(block.x[s:s + CHUNK_ROWS], dtype=np.float64)
-                y = np.asarray(block.y[s:s + CHUNK_ROWS], dtype=np.float64)
-                xw = x * block.w_train[s:s + CHUNK_ROWS, None]
-                XX += xw.T @ x
-                XY += xw.T @ y
+            accumulate(XX, XY, block.x, block.y, block.w_train)
         if XX is None:
             raise ValueError("Training window has no positive-weight rows")
+        self._solve(XX, XY)
+
+    def fit_arrays(self, X, y, w, date_idx=None):
+        """Experiment-split path: X may be a memmap; streamed in CHUNK_ROWS blocks."""
+        k = X.shape[1]
+        XX = np.zeros((k, k))
+        XY = np.zeros(k)
+        accumulate(XX, XY, X, y, np.asarray(w, dtype=np.float64))
+        self._solve(XX, XY)
+        return {"n_rows": int(y.shape[0])}
+
+    def _solve(self, XX, XY):
         XX = 0.5 * (XX + XX.T)  # remove float round-off asymmetry
-        self.beta = ridge_solve(XX, XY)
+        self.beta = ridge_solve(XX, XY, self.lam)
 
     def predict(self, X):
         out = np.empty(X.shape[0], dtype=np.float32)
