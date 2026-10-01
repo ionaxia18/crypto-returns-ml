@@ -1,3 +1,5 @@
+# Prediction arrays and run outputs are large; reports/manifests stay tracked.
+runs/*/preds/
 results/
 logs/
 __pycache__/
