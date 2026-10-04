@@ -1,0 +1,9 @@
+# Seed repeats: how much of the model gap is seed luck? lgbm_base and mlp_base
+# (seed 0) are already in results/experiment; these add seeds 1 and 2 with
+# everything else identical. Ridge is deterministic and needs no repeats.
+# Seed drives LightGBM's row subsample + bagging, and the MLP's init + shuffling.
+# Submit: scripts/submit_experiment.sh experiments/seeds_v1.txt
+lgbm_base_s1   lgbm  {"seed": 1}
+lgbm_base_s2   lgbm  {"seed": 2}
+mlp_base_s1    mlp   {"in_ram": false, "seed": 1}
+mlp_base_s2    mlp   {"in_ram": false, "seed": 2}

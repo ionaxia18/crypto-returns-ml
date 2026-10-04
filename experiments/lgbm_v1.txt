@@ -1,0 +1,9 @@
+# LightGBM: is the 2M-row cap what holds it back? (lgbm_base: 2M of 11.4M rows,
+# APS 1.17 vs ridge 1.64 on the same split.) Everything else at the defaults
+# in models/lgbm.py unless named. Raw X held in RAM per run is ~3.9 GB per
+# million rows, plus ~1 GB per million binned, so submit with --mem 128G.
+# Submit: scripts/submit_experiment.sh experiments/lgbm_v1.txt --mem 128G
+lgbm_rows6m        lgbm  {"max_rows": 6000000}
+lgbm_allrows       lgbm  {"max_rows": 0}   # all ~11.4M rows; X passed as the memmap
+lgbm_rows6m_lr02   lgbm  {"max_rows": 6000000, "learning_rate": 0.02, "num_boost_round": 5000}
+lgbm_rows6m_nl15   lgbm  {"max_rows": 6000000, "num_leaves": 15, "min_data_in_leaf": 5000}
