@@ -22,6 +22,7 @@ Run:
 
 from __future__ import annotations
 
+import hashlib
 import os
 
 import numpy as np
@@ -60,6 +61,11 @@ def holdout_split(n, date_idx, es_days, embargo_days, es_frac):
     if fit_end <= 0 or hold_start >= n:
         raise ValueError("training window too short for the early-stopping holdout")
     return fit_end, hold_start
+
+
+def rows_fingerprint(idx):
+    """Short hash of the fit-row indices (same as models/ridge.py)."""
+    return hashlib.sha1(np.ascontiguousarray(idx, dtype=np.int64).tobytes()).hexdigest()[:12]
 
 
 def pooled_aps(pred, y, w):
@@ -127,6 +133,7 @@ class MyModel:
         self.best_iteration = int(self.booster.best_iteration or self.num_boost_round)
         return {
             "n_fit_rows": int(idx.size),
+            "fit_rows_sha": rows_fingerprint(idx),
             "n_holdout_rows": int(n - hold_start),
             "best_iteration": self.best_iteration,
             "holdout_aps_bps": float(self.booster.best_score["holdout"]["aps"]) * 1e4,

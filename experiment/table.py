@@ -61,6 +61,9 @@ def build_table(split_dir, results, baseline=None, extra=(), data_root=None):
             "name": name, "model": rec["model"] if rec else "kit run",
             "APS_bps": m["APS_mean_bps"], "COR_%": m["COR_mean"] * 100,
             "APS_SR": m["APS_SR"], "AR": m["AR_mean"], "clip_rate": guard["clip_rate"],
+            # Same rows_id = trained on identical rows (models/*.py fingerprints).
+            "fit_rows": rec.get("fit_info", {}).get("n_fit_rows") if rec else None,
+            "rows_id": rec.get("fit_info", {}).get("fit_rows_sha") if rec else None,
             "fit_s": rec["timing_s"]["fit"] if rec else None,
             "total_s": rec["timing_s"]["total"] if rec else None,
             "peak_GB": rec["peak_rss_gb"]["final"] if rec else None,
@@ -89,6 +92,8 @@ def build_table(split_dir, results, baseline=None, extra=(), data_root=None):
             if v != v:
                 return "nan"
             return f"{v:.2e}" if 0 < abs(v) < 1e-3 else f"{v:.3f}" if abs(v) < 100 else f"{v:.0f}"
+        if isinstance(v, int) and not isinstance(v, bool):
+            return f"{v:,}"
         return str(v)
 
     lines = [head, "", "| " + " | ".join(cols) + " |",

@@ -131,6 +131,30 @@ def test_three_models_run_and_find_signal(split3, tmp_path, model, config):
     assert rec["timing_s"]["fit"] >= 0 and rec["peak_rss_gb"]["final"] > 0
 
 
+def test_equal_data_settings_give_identical_fit_rows(split3, tmp_path):
+    """Same max_rows / es_days / seed -> all three models fit the same rows."""
+    common = {"max_rows": 400, "es_days": 5, "seed": 3}
+    configs = {
+        "ridge": common,
+        "lgbm": {**common, "num_boost_round": 5, "min_data_in_leaf": 20, "num_leaves": 7,
+                 "threads": 1},
+        "mlp": {**common, "hidden": [8], "max_epochs": 1, "threads": 1},
+    }
+    shas = {}
+    for model, cfg in configs.items():
+        rec = quiet(xrun.run_one, split3.root, model, cfg, model, tmp_path)
+        assert rec["fit_info"]["n_fit_rows"] == 400
+        shas[model] = rec["fit_info"]["fit_rows_sha"]
+    assert len(set(shas.values())) == 1, shas
+    # Without max_rows, ridge with es_days drops exactly the holdout + embargo rows,
+    # matching the MLP's all-rows fit set.
+    r = quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "r_es", tmp_path)
+    m = quiet(xrun.run_one, split3.root, "mlp", {"es_days": 5, "hidden": [8], "max_epochs": 1,
+                                                  "threads": 1}, "m_es", tmp_path)
+    assert r["fit_info"]["fit_rows_sha"] == m["fit_info"]["fit_rows_sha"]
+    assert r["fit_info"]["n_fit_rows"] < split3.meta["train"]["n_rows"]
+
+
 # -- run -----------------------------------------------------------------------
 
 def test_run_writes_kit_format_preds_scored_by_kit(data_root, split3, tmp_path):
