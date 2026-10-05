@@ -39,7 +39,7 @@ meta.json is written last; a crashed build has none and will not open.
 
 Usage::
 
-    python -m experiment.split --data $DATA_ROOT --out $SCRATCH/core980-work/experiment/v1
+    python -m experiment.split --data $DATA_ROOT --out $SCRATCH/core980-work/experiment/v2_52w
 """
 
 from __future__ import annotations
@@ -61,7 +61,9 @@ from f522kit.driver import KIT_VERSION, resolve_schedule
 
 SPLIT_VERSION = 2
 VAL_AFTER = datetime.date(2024, 4, 1)
-TRAIN_WEEKS = 26
+# 52 weeks from the training-length check (ridge, stride 5): 26w 1.64, 52w 1.84,
+# 104w 2.02 bps. 52w stays within the brief's "up to ~1 year"; v1 used 26w.
+TRAIN_WEEKS = 52
 # Stride 5 chosen from experiment/checks/stride_test.py (26w, anchor 2024-04-14):
 # ridge APS 1.64 bps at stride 5 vs 1.71 at stride 1 (96%) and 1.46 at 15.
 MINUTE_STRIDE = 5

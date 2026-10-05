@@ -25,8 +25,10 @@ LIST="${1:?usage: experiment_run.sbatch LIST [run.py args...]}"
 shift
 VENV="${VENV:-$SCRATCH/core980-work/.venv}"
 DATA_ROOT="${DATA_ROOT:-/oak/stanford/projects/ruizhe-share/student_core980/data/core980_h30}"
-SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v1}"
-OUT="${OUT:-results/experiment}"
+SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v2_52w}"
+# Results go to results/<split dir name>/ unless OUT is set.
+OUT_ARGS=()
+[[ -n "${OUT:-}" ]] && OUT_ARGS=(--out "$OUT")
 
 source "$VENV/bin/activate"
 # Ridge parallelizes through BLAS; LightGBM/MLP take threads from
@@ -38,6 +40,6 @@ export PYTHONUNBUFFERED=1
 
 cd "$SLURM_SUBMIT_DIR"
 echo "host=$(hostname) cpus=$SLURM_CPUS_PER_TASK list=$LIST task=$SLURM_ARRAY_TASK_ID start=$(date -Is)"
-python -m experiment.run --split "$SPLIT" --data "$DATA_ROOT" --out "$OUT" \
+python -m experiment.run --split "$SPLIT" --data "$DATA_ROOT" ${OUT_ARGS[@]+"${OUT_ARGS[@]}"} \
        --list "$LIST" --index "$SLURM_ARRAY_TASK_ID" "$@"
 echo "end=$(date -Is)"

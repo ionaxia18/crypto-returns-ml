@@ -3,11 +3,11 @@
 # training days (14-day early-stopping holdout + 1-day embargo), which LightGBM
 # and the MLP never train on; ridge uses no holdout but skips those days too.
 #
-# Tier "2m": the same seeded 2M-row sample. Partner already run: lgbm_base.
-# Tier "all": every remaining row (~10.5M). Partners: mlp_base (already run)
+# Tier "2m": the same seeded 2M-row sample. Partner: lgbm_base (models_v1.txt).
+# Tier "all": every remaining row (~19.5M on 52w). Partners: mlp_base (models_v1.txt)
 #             and lgbm_allrows (experiments/lgbm_v1.txt, needs --mem 128G).
 #
-# ridge_eqall vs ridge (all 180 days) also measures what the 15 days are worth.
+# ridge_eqall vs ridge (all training days) also measures what the 15 days are worth.
 # Submit: scripts/submit_experiment.sh experiments/equal_data_v1.txt
 ridge_eq2m    ridge  {"max_rows": 2000000, "es_days": 14}
 mlp_eq2m      mlp    {"max_rows": 2000000}

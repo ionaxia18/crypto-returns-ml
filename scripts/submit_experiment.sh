@@ -14,7 +14,11 @@
 # - CPU benchmark: submit the same list at several -c values with a suffix, e.g.
 #     for c in 8 16 32; do scripts/submit_experiment.sh LIST -c $c -- --suffix _c$c; done
 # - MAX_PARALLEL=N limits how many array tasks run at once (default: all).
-# - SPLIT (default $SCRATCH/core980-work/experiment/v1) is exported to both jobs.
+# - SPLIT (default $SCRATCH/core980-work/experiment/v2_52w) is exported to both jobs.
+#   Results go to results/<split dir name>/ (e.g. results/v2_52w/).
+# - Several lists can be submitted back to back before the split exists: the
+#   pending build job id is kept in $SPLIT.build_job and later submissions
+#   wait on that same build instead of starting another.
 #
 # Run from the repo root. Needs no venv: entries are counted here the same
 # way experiment/run.py reads them (text after # ignored, blank lines skipped).
@@ -32,18 +36,29 @@ N=$(sed 's/#.*//' "$LIST" | grep -c '[^[:space:]]' || true)
 [[ "$N" -gt 0 ]] || { echo "$LIST has no entries" >&2; exit 1; }
 ARRAY="1-$N${MAX_PARALLEL:+%$MAX_PARALLEL}"
 
-export SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v1}"
+export SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v2_52w}"
+MARKER="$SPLIT.build_job"
 mkdir -p logs
 
 DEPEND=()
+PENDING_ID=""
+if [[ -f "$MARKER" ]]; then
+  PENDING_ID=$(cat "$MARKER")
+  squeue -h -j "$PENDING_ID" 2>/dev/null | grep -q . || PENDING_ID=""  # no longer queued
+fi
 if [[ -f "$SPLIT/meta.json" ]]; then
   echo "using existing split $SPLIT"
+  rm -f "$MARKER"
+elif [[ -n "$PENDING_ID" ]]; then
+  echo "split $SPLIT is being built by job $PENDING_ID: runs will wait for it"
+  DEPEND=(--dependency="afterok:$PENDING_ID")
 elif [[ -e "$SPLIT" ]]; then
-  echo "$SPLIT exists without meta.json: a build is running or crashed." >&2
-  echo "Check squeue / logs/experiment_build-*.out; remove the directory to rebuild." >&2
+  echo "$SPLIT exists without meta.json and no build is queued: the build crashed." >&2
+  echo "Check logs/experiment_build-*.out; remove $SPLIT and $MARKER to rebuild." >&2
   exit 1
 else
   BUILD_ID=$(sbatch --parsable scripts/experiment_build.sbatch)
+  mkdir -p "$(dirname "$SPLIT")" && echo "$BUILD_ID" > "$MARKER"
   echo "no split at $SPLIT: submitted build job $BUILD_ID"
   DEPEND=(--dependency="afterok:$BUILD_ID")
 fi

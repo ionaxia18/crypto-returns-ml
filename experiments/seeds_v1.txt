@@ -1,5 +1,5 @@
-# Seed repeats: how much of the model gap is seed luck? lgbm_base and mlp_base
-# (seed 0) are already in results/experiment; these add seeds 1 and 2 with
+# Seed repeats: how much of the model gap is seed luck? Seed 0 is lgbm_base and
+# mlp_base from models_v1.txt on the same split; these add seeds 1 and 2 with
 # everything else identical. Ridge is deterministic and needs no repeats.
 # Seed drives LightGBM's row subsample + bagging, and the MLP's init + shuffling.
 # Submit: scripts/submit_experiment.sh experiments/seeds_v1.txt

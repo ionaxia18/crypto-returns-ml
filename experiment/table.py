@@ -1,7 +1,7 @@
 """Collect experiment-split runs into one comparison table.
 
-    python -m experiment.table --split $SCRATCH/core980-work/experiment/v1 \\
-        --baseline results/experiment/ridge --extra runs/linear_4w --md results/experiment/TABLE.md
+    python -m experiment.table --split $SCRATCH/core980-work/experiment/v2_52w \\
+        --baseline results/v2_52w/ridge --extra runs/linear_4w --md results/v2_52w/TABLE.md
 
 Rows are every run directory under ``--results`` (written by
 experiment/run.py) plus any ``--extra`` kit run directories, e.g. the full
@@ -106,14 +106,15 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m experiment.table", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--split", required=True)
-    p.add_argument("--results", default=str(REPO / "results" / "experiment"))
+    p.add_argument("--results", default=None, help="default: results/<split dir name>")
     p.add_argument("--baseline", default=None, help="run dir for the paired columns")
     p.add_argument("--extra", action="append", default=[],
                    help="extra kit run dir to include (repeatable), e.g. runs/linear_4w")
     p.add_argument("--data", default=None, help="dataset root (default: the split's)")
     p.add_argument("--md", default=None, help="also write the markdown table here")
     a = p.parse_args(argv)
-    _, md = build_table(a.split, a.results, a.baseline, a.extra, a.data)
+    results = a.results or str(REPO / "results" / Path(a.split).resolve().name)
+    _, md = build_table(a.split, results, a.baseline, a.extra, a.data)
     print(md)
     if a.md:
         Path(a.md).write_text(md + "\n", encoding="utf-8")

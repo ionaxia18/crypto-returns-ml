@@ -1,6 +1,6 @@
 """Run one model on the experiment split and log metrics, runtime and peak memory.
 
-    python -m experiment.run --split $SCRATCH/core980-work/experiment/v1 --model lgbm \\
+    python -m experiment.run --split $SCRATCH/core980-work/experiment/v2_52w --model lgbm \\
         --config '{"max_rows": 2000000}' --name lgbm_default
 
 ``--model`` is ``ridge|lgbm|mlp`` (-> models/<name>.py:MyModel) or any
@@ -12,7 +12,8 @@ Several runs: ``--list experiments/<file>.txt`` with one
 ``$SLURM_ARRAY_TASK_ID``); this is what scripts/experiment_run.sbatch uses as
 an array job. ``--list FILE --count`` prints the number of entries.
 
-Writes a run directory ``<out>/<name>/``:
+Writes a run directory ``<out>/<name>/`` (``--out`` defaults to
+``results/<split dir name>``, so runs on different splits never mix):
 
     preds/YYYY-MM-DD.npy   float32 [1440, S] per val date, the kit's
                            prediction format (0 on rows the split skips,
@@ -56,6 +57,11 @@ from .split import ExperimentSplit
 
 REPO = Path(__file__).resolve().parent.parent
 MODELS = {name: f"{REPO}/models/{name}.py:MyModel" for name in ("ridge", "lgbm", "mlp")}
+
+
+def default_results_dir(split_dir) -> Path:
+    """results/<split dir name>, e.g. results/v2_52w."""
+    return REPO / "results" / Path(split_dir).resolve().name
 
 
 def load_class(spec: str):
@@ -221,10 +227,10 @@ def main(argv=None) -> int:
                    help="1-based entry of --list (default: $SLURM_ARRAY_TASK_ID)")
     p.add_argument("--count", action="store_true", help="print the number of --list entries")
     p.add_argument("--suffix", default="", help="appended to the run name, e.g. _c32")
-    p.add_argument("--out", default=str(REPO / "results" / "experiment"))
+    p.add_argument("--out", default=None, help="default: results/<split dir name>")
     p.add_argument("--in-ram", action="store_true", help="load train X fully into RAM")
     p.add_argument("--baseline", default=None,
-                   help="run dir to pair against (e.g. results/experiment/ridge or runs/linear_4w)")
+                   help="run dir to pair against (e.g. results/v2_52w/ridge or runs/linear_4w)")
     p.add_argument("--data", default=None, help="dataset root (default: the split's)")
     p.add_argument("--force", action="store_true", help="overwrite an existing run dir")
     a = p.parse_args(argv)
@@ -244,7 +250,8 @@ def main(argv=None) -> int:
         name = a.name or f"{Path(a.model).stem}_{cpus()}cpu"
     if not a.split:
         raise SystemExit("--split is required")
-    run_one(a.split, model, config, name + a.suffix, a.out, in_ram=a.in_ram,
+    out = a.out or str(default_results_dir(a.split))
+    run_one(a.split, model, config, name + a.suffix, out, in_ram=a.in_ram,
             baseline=a.baseline, data_root=a.data, force=a.force)
     return 0
 

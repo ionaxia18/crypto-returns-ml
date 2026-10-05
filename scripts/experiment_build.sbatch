@@ -4,10 +4,10 @@
 # Submit from the repo root:
 #   mkdir -p logs
 #   sbatch scripts/experiment_build.sbatch
-#   SPLIT=$SCRATCH/core980-work/experiment/s5 sbatch scripts/experiment_build.sbatch --minute-stride 5
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_104w sbatch scripts/experiment_build.sbatch --train-weeks 104
 #
 # Extra arguments are passed through to `python -m experiment.split`.
-# Disk: ~45 GB train (~11.4M rows) + ~35 GB val at the defaults (26 weeks, stride 5).
+# Disk: ~80 GB train (~20.4M rows) + ~35 GB val at the defaults (52 weeks, stride 5).
 # --workers defaults to --cpus-per-task; each worker holds <= ~130 MB.
 #SBATCH --job-name=experiment_build
 #SBATCH --partition=normal
@@ -23,7 +23,7 @@ set -euo pipefail
 
 VENV="${VENV:-$SCRATCH/core980-work/.venv}"
 DATA_ROOT="${DATA_ROOT:-/oak/stanford/projects/ruizhe-share/student_core980/data/core980_h30}"
-SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v1}"
+SPLIT="${SPLIT:-$SCRATCH/core980-work/experiment/v2_52w}"
 
 source "$VENV/bin/activate"
 export PYTHONUNBUFFERED=1
