@@ -1,0 +1,96 @@
+{
+  "name": "lgbm_rows6m",
+  "model": "lgbm",
+  "spec": "/scratch/users/ionaxia/core980-work/crypto-returns-ml/models/lgbm.py:MyModel",
+  "config": {
+    "threads": 17,
+    "max_rows": 6000000
+  },
+  "split": "/scratch/users/ionaxia/core980-work/experiment/v2_52w",
+  "split_meta": {
+    "split_version": 2,
+    "anchor": "2024-04-14",
+    "train_weeks": 52,
+    "minute_stride": 5,
+    "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439"
+  },
+  "cpus": 17,
+  "host": "sh03-01n15.int",
+  "platform": "Linux-3.10.0-1160.144.1.el7.tuxcare.els4.x86_64-x86_64-with-glibc2.17",
+  "slurm_job": "46577056",
+  "git": "unknown",
+  "started": "2026-10-04T23:43:18",
+  "fit_info": {
+    "n_fit_rows": 6000000,
+    "fit_rows_sha": "0ee7f504e64d",
+    "n_holdout_rows": 990132,
+    "best_iteration": 83,
+    "holdout_aps_bps": 1.4613206765965754,
+    "y_scale": 0.004568908816915706
+  },
+  "report": {
+    "windows": {
+      "val": {
+        "n_dates": 28,
+        "start_date": "2024-04-09",
+        "end_date": "2024-05-06",
+        "APS_mean_bps": 1.6501005538057034,
+        "COR_mean": 0.03599577633234371,
+        "AR_mean": 0.9091698663429019,
+        "APS_SR": 28.773669245939658,
+        "AS_mean": 0.00017941844960849682,
+        "RS_mean": 0.004580588618391494
+      }
+    },
+    "guardrails": {
+      "val": {
+        "n_dates": 28,
+        "clip_rate": 0.0,
+        "pred_rms_weighted_rows": 0.00020703246299604909
+      }
+    },
+    "daily_APS_bps": [
+      0.41346970891688145,
+      0.9690574702354972,
+      1.6931723478094571,
+      4.210134028626712,
+      1.95053724444496,
+      2.2888086882822334,
+      1.7068344218588223,
+      1.9590238715602741,
+      1.47712506016514,
+      2.7577952785821687,
+      0.6268103901847727,
+      1.005426384349897,
+      2.6505084595599318,
+      1.6844258552504991,
+      4.549929170780299,
+      0.5264595682764492,
+      0.5898596945576648,
+      0.6986324272073646,
+      1.893458321893964,
+      1.597423605359057,
+      0.05011038829278436,
+      1.1175716072277768,
+      1.4115505088362754,
+      1.976366193955235,
+      0.6092620131005488,
+      1.2370332753965552,
+      3.4456309076118443,
+      1.1063986142366464
+    ]
+  },
+  "baseline": null,
+  "x_in_ram": false,
+  "timing_s": {
+    "load": 0.36,
+    "fit": 613.22,
+    "predict": 320.08,
+    "total": 937.32
+  },
+  "peak_rss_gb": {
+    "after_fit": 66.723,
+    "final": 66.723
+  },
+  "finished": "2026-10-04T23:58:56"
+}
