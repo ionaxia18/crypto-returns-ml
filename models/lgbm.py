@@ -7,9 +7,11 @@
   scored with pooled weighted APS. Nothing outside the training window is
   ever consulted.
 - Memory: LightGBM bins the whole fit matrix in RAM (~1 byte/value at
-  max_bin <= 255). ``max_rows`` caps the fit rows with a deterministic
-  uniform subsample; with no cap a memmapped prefix is passed through
-  without a float copy.
+  max_bin <= 255). By default (``max_rows=0``) every fit row is used, the
+  same rows the MLP and ridge with ``es_days=14`` train on; a memmapped
+  prefix is passed through without a float copy (52w split: ~19M rows,
+  needs ~128 GB). ``max_rows`` > 0 caps the fit rows with a deterministic
+  uniform subsample.
 
 Kit path (``fit(train)``) draws ``train.sample(train.row_budget, seed)``;
 that sample is date-ordered but carries no date labels, so the holdout is
@@ -75,7 +77,7 @@ def pooled_aps(pred, y, w):
 
 
 class MyModel:
-    def __init__(self, max_rows=2_000_000, num_boost_round=2000,
+    def __init__(self, max_rows=0, num_boost_round=2000,
                  early_stopping_rounds=100, es_days=14, embargo_days=1,
                  es_frac=0.1, threads=0, seed=0, **params):
         self.max_rows = int(max_rows)

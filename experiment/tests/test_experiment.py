@@ -225,3 +225,61 @@ def test_stride_test_matches_split_plus_ridge(data_root, split1, split3, tmp_pat
         assert res[str(stride)]["train_rows"] == sp.meta["train"]["n_rows"]
         np.testing.assert_allclose(res[str(stride)]["APS_mean_bps"],
                                    rec["report"]["windows"]["val"]["APS_mean_bps"], rtol=1e-6)
+
+
+def test_config_table_combines_seeds(split3, tmp_path):
+    res = tmp_path / "res"
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "ridge_es", res)
+    quiet(xrun.run_one, split3.root, "ridge", {"lam": 10.0}, "ridge_lam10", res)
+    mlp = {"es_days": 5, "hidden": [8], "max_epochs": 2, "threads": 1}
+    for s in (0, 1, 2):
+        quiet(xrun.run_one, split3.root, "mlp", {**mlp, "seed": s}, f"mlp_s{s}", res)
+    quiet(xrun.run_one, split3.root, "mlp", {**mlp, "lr": 3e-4}, "mlp_lr", res)
+
+    rows, md = xtable.build_config_table(res, baseline="ridge_es")
+    by = {r["runs"]: r for r in rows}
+    assert set(by) == {"ridge_es", "ridge_lam10", "mlp_s0, mlp_s1, mlp_s2", "mlp_lr"}
+    assert rows[0]["note"] == "baseline" and rows[0]["dAPS_bps"] is None
+    seeds = by["mlp_s0, mlp_s1, mlp_s2"]
+    assert seeds["seeds"] == 3 and seeds["note"] == "" and seeds["rows"] == "same"
+    aps = [json.loads((res / f"mlp_s{s}" / "record.json").read_text())
+           ["report"]["windows"]["val"]["APS_mean_bps"] for s in (0, 1, 2)]
+    np.testing.assert_allclose(seeds["APS_bps"], np.mean(aps))
+    assert by["mlp_lr"]["note"].startswith("⚠")    # one seed of a random model
+    assert by["ridge_lam10"]["note"] == ""          # ridge is deterministic
+    # paired columns: seed-averaged daily APS minus the baseline's, day by day
+    base = json.loads((res / "ridge_es" / "record.json").read_text())["report"]["daily_APS_bps"]
+    daily = np.mean([json.loads((res / f"mlp_s{s}" / "record.json").read_text())
+                     ["report"]["daily_APS_bps"] for s in (0, 1, 2)], axis=0)
+    np.testing.assert_allclose(seeds["dAPS_bps"], np.mean(daily - np.array(base)))
+    assert "mlp_s0, mlp_s1, mlp_s2" in md
+
+
+def test_resolved_config_separates_changed_defaults(split3, tmp_path):
+    """Same typed settings but different effective settings -> different rows."""
+    res = tmp_path / "res"
+    quiet(xrun.run_one, split3.root, "ridge", {}, "r_default", res)
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "r_es", res)
+    rec = json.loads((res / "r_default" / "record.json").read_text())
+    assert rec["resolved_config"]["lam"] == 0.01 and rec["resolved_config"]["es_days"] == 0
+    # Simulate an old record whose model default differed: same typed config {},
+    # different resolved settings. They must not be averaged together.
+    old = dict(rec, name="r_old", resolved_config={**rec["resolved_config"], "lam": 1.0})
+    (res / "r_old").mkdir()
+    (res / "r_old" / "record.json").write_text(json.dumps(old))
+    rows, _ = xtable.build_config_table(res, baseline="r_es")
+    assert {r["runs"] for r in rows} == {"r_default", "r_old", "r_es"}
+
+
+def test_config_table_resolves_records_without_settings(split3, tmp_path):
+    """A record written by older code (no resolved_config) groups with new ones."""
+    res = tmp_path / "res"
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "base", res)
+    quiet(xrun.run_one, split3.root, "ridge", {"lam": 3.0}, "new", res)
+    old = json.loads((res / "new" / "record.json").read_text())
+    old.pop("resolved_config")
+    old["name"] = "legacy"
+    (res / "legacy").mkdir()
+    (res / "legacy" / "record.json").write_text(json.dumps(old))
+    rows, _ = xtable.build_config_table(res, baseline="base")
+    assert {r["runs"] for r in rows} == {"base", "legacy, new"}

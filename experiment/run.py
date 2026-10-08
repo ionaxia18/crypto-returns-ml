@@ -64,6 +64,23 @@ def default_results_dir(split_dir) -> Path:
     return REPO / "results" / Path(split_dir).resolve().name
 
 
+def resolved_config(model) -> dict:
+    """The model's settings after construction (plain JSON-able attributes)."""
+    simple = (int, float, str, bool, type(None))
+
+    def ok(v):
+        if isinstance(v, simple):
+            return True
+        if isinstance(v, (list, tuple)):
+            return all(ok(x) for x in v)
+        if isinstance(v, dict):
+            return all(isinstance(k, str) and ok(x) for k, x in v.items())
+        return False
+
+    return {k: (list(v) if isinstance(v, tuple) else v)
+            for k, v in sorted(vars(model).items()) if not k.startswith("_") and ok(v)}
+
+
 def load_class(spec: str):
     """The model class behind ``path.py:Class``, loaded the way the kit does."""
     # The kit's factory constructs with no arguments; we need kwargs.
@@ -159,6 +176,9 @@ def run_one(split_dir, model, config, name, out_dir, in_ram=False, baseline=None
     load_s = time.time() - t0
 
     model_obj = load_class(spec)(**config)
+    # Every setting the model actually uses, defaults included, so results
+    # stay comparable even if a model's defaults change later.
+    record["resolved_config"] = resolved_config(model_obj)
     t1 = time.time()
     fit_info = model_obj.fit_arrays(X, y, w, date_idx=d) or {}
     fit_s = time.time() - t1

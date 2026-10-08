@@ -124,5 +124,28 @@
     "after_fit": 39.411,
     "final": 40.841
   },
-  "finished": "2026-10-04T19:18:39"
+  "finished": "2026-10-04T19:18:39",
+  "resolved_config": {
+    "batch_size": 4096,
+    "chunk_rows": 262144,
+    "clip_sigma": 5.0,
+    "dropout": 0.1,
+    "embargo_days": 1,
+    "es_days": 14,
+    "es_frac": 0.1,
+    "hidden": [
+      256,
+      128
+    ],
+    "in_ram": true,
+    "lr": 0.001,
+    "max_epochs": 20,
+    "max_rows": 2000000,
+    "patience": 3,
+    "seed": 0,
+    "stats_rows": 500000,
+    "threads": 16,
+    "weight_decay": 1e-05
+  },
+  "resolved_config_backfilled": "2026-10-07: from typed config + defaults at run time"
 }

@@ -12,7 +12,7 @@
 #SBATCH --job-name=experiment_run
 #SBATCH --partition=normal
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --mem=128G   # LightGBM on all fit rows (52w split) needs ~128 GB
 #SBATCH --time=06:00:00
 #SBATCH --output=logs/%x-%A_%a.out
 

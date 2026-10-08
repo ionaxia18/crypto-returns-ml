@@ -94,5 +94,29 @@
     "after_fit": 79.506,
     "final": 79.506
   },
-  "finished": "2026-10-04T19:43:28"
+  "finished": "2026-10-04T19:43:28",
+  "resolved_config": {
+    "early_stopping_rounds": 100,
+    "embargo_days": 1,
+    "es_days": 14,
+    "es_frac": 0.1,
+    "max_rows": 6000000,
+    "num_boost_round": 5000,
+    "params": {
+      "objective": "regression",
+      "learning_rate": 0.02,
+      "num_leaves": 63,
+      "min_data_in_leaf": 2000,
+      "min_sum_hessian_in_leaf": 0.0,
+      "feature_fraction": 0.5,
+      "bagging_fraction": 0.5,
+      "bagging_freq": 1,
+      "lambda_l2": 10.0,
+      "max_bin": 63,
+      "verbose": -1
+    },
+    "seed": 0,
+    "threads": 17
+  },
+  "resolved_config_backfilled": "2026-10-07: from typed config + defaults at run time"
 }

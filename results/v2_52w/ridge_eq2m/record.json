@@ -88,5 +88,13 @@
     "after_fit": 14.635,
     "final": 38.904
   },
-  "finished": "2026-10-04T23:49:46"
+  "finished": "2026-10-04T23:49:46",
+  "resolved_config": {
+    "embargo_days": 1,
+    "es_days": 14,
+    "lam": 0.01,
+    "max_rows": 2000000,
+    "seed": 0
+  },
+  "resolved_config_backfilled": "2026-10-07: from typed config + defaults at run time"
 }

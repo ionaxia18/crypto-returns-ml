@@ -1,6 +1,8 @@
-# Experiment-split comparison of the three model families at default settings.
+# Standard comparison: all three models train on the SAME rows -- every
+# training day except the last 15 (LightGBM/MLP hold them out for early
+# stopping; ridge_base skips them too). Compare with --baseline ridge_base.
 # One run per line: name  model  {json constructor kwargs}
 # Submit: scripts/submit_experiment.sh experiments/models_v1.txt
-ridge       ridge  {}
-lgbm_base   lgbm   {}
-mlp_base    mlp    {"in_ram": false}   # train X is ~80 GB (52w, stride 5): stream it
+ridge_base  ridge  {"es_days": 14}
+lgbm_base   lgbm   {}                   # all fit rows (default max_rows=0)
+mlp_base    mlp    {"in_ram": false}    # all fit rows; train X ~80 GB, so stream it

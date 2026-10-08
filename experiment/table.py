@@ -12,6 +12,14 @@ diff-Sharpe, win rate) use the kit's ``paired_diff`` vs ``--baseline``,
 so all comparisons are on identical dates and rows.
 
 Runs recorded on a different split are refused rather than mixed in.
+
+``--by-config`` gives one row per configuration instead: runs with the same
+model and settings, ignoring only ``seed`` and ``threads``, are combined by
+averaging their daily APS, and the paired columns compare that against the
+baseline's configuration (``--baseline`` is then a run name). It reads the
+records' kit-scored daily APS only, so it needs no dataset access:
+
+    python -m experiment.table --results results/v2_52w --by-config --baseline ridge_eqall
 """
 
 from __future__ import annotations
@@ -20,8 +28,10 @@ import argparse
 import json
 from pathlib import Path
 
+import numpy as np
+
 from f522kit.data import Dataset
-from f522kit.metrics import aggregate, paired_diff
+from f522kit.metrics import aggregate, annualized_sharpe, paired_diff
 from f522kit.scoring import collect_daily_stats
 
 from .split import ExperimentSplit
@@ -83,29 +93,150 @@ def build_table(split_dir, results, baseline=None, extra=(), data_root=None):
             f"{meta['val_dates'][0]}..{meta['val_dates'][-1]} "
             f"({len(meta['val_dates'])} dates, all rows)"
             + (f"; paired columns vs `{baseline}`" if baseline else ""))
+    return rows, _markdown(head, rows, left=("name", "model", "rows_id"))
+
+
+# Settings that do not define a configuration: runs differing only in these
+# are seeds (or hardware / data-feeding variants) of the same configuration.
+# in_ram only changes how the MLP's rows are fed (loaded once vs streamed).
+NON_CONFIG_KEYS = {"seed", "threads", "in_ram"}
+# Models with no randomness: extra seeds cannot change them, so no seed warning.
+DETERMINISTIC_MODELS = {"ridge"}
+
+
+def _canon(cfg: dict) -> str:
+    cfg = {k: v for k, v in cfg.items() if k not in NON_CONFIG_KEYS}
+    return json.dumps(cfg, sort_keys=True, separators=(",", ":"))
+
+
+def _resolve_now(rec: dict) -> dict:
+    """Full settings for a record written before run.py stored them: rebuild the
+    model from its typed config with the current code's defaults. Exact as long
+    as no default the run relied on has changed since; the one change so far
+    (LightGBM max_rows 2M -> 0) was backfilled into the older records."""
+    from .run import MODELS, load_class, resolved_config  # deferred: heavy imports
+    spec = MODELS.get(rec["model"], rec.get("spec", rec["model"]))
+    return resolved_config(load_class(spec)(**rec.get("config", {})))
+
+
+def config_key(rec: dict) -> tuple[str, str]:
+    """Group by the model's full effective settings (``resolved_config``, which
+    includes defaults); older records get them rebuilt via ``_resolve_now``."""
+    if "resolved_config" not in rec:
+        rec["resolved_config"] = _resolve_now(rec)
+    return rec["model"], _canon(rec["resolved_config"])
+
+
+def build_config_table(results, baseline=None, min_seeds=3):
+    """One row per configuration, seeds combined; reads records only.
+
+    A configuration's daily APS is the mean over its seeds, day by day; the
+    paired columns compare that series with the baseline configuration's
+    (the group containing run ``baseline``) using the kit's ``annualized_sharpe``.
+    """
+    results = Path(results)
+    recs = [json.loads(p.read_text(encoding="utf-8"))
+            for p in sorted(results.glob("*/record.json"))]
+    if not recs:
+        raise SystemExit(f"no run records under {results}")
+    splits = {r["split"] for r in recs}
+    if len(splits) > 1:
+        raise SystemExit(f"records come from different splits: {sorted(splits)}")
+
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for r in recs:
+        groups.setdefault(config_key(r), []).append(r)
+
+    def daily(members):
+        series = [m["report"]["daily_APS_bps"] for m in members]
+        if len({len(s) for s in series}) != 1:
+            raise SystemExit(f"{[m['name'] for m in members]}: different val date counts")
+        return np.mean(np.array(series), axis=0)
+
+    base_key = None
+    if baseline:
+        by_name = {r["name"]: r for r in recs}
+        if baseline not in by_name:
+            raise SystemExit(f"baseline {baseline!r} is not a run under {results}")
+        base_key = config_key(by_name[baseline])
+        base_daily = daily(groups[base_key])
+
+    rows = []
+    for key, members in groups.items():
+        members.sort(key=lambda m: m["config"].get("seed", 0))
+        seed_aps = [m["report"]["windows"]["val"]["APS_mean_bps"] for m in members]
+        shas = {m.get("fit_info", {}).get("fit_rows_sha") for m in members}
+        model = key[0]
+        row = {
+            # Label with the short typed settings; grouping used the full ones.
+            "config": f"{model} {_canon(members[0].get('config', {}))}",
+            "runs": ", ".join(m["name"] for m in members),
+            "seeds": len(members),
+            "APS_bps": float(np.mean(seed_aps)),
+            "seed_range": (f"{min(seed_aps):.2f}-{max(seed_aps):.2f}"
+                           if len(members) > 1 else None),
+            "fit_rows": members[0].get("fit_info", {}).get("n_fit_rows"),
+            # Seeds may draw different row samples (e.g. LightGBM max_rows).
+            "rows": ("varies" if len(shas) > 1 else "same") if len(members) > 1 else None,
+            "fit_s": float(np.mean([m["timing_s"]["fit"] for m in members])),
+        }
+        if base_key is not None:
+            diff = daily(members) - base_daily
+            is_base = key == base_key
+            row.update({
+                "dAPS_bps": float(diff.mean()) if not is_base else None,
+                "diff_SR": annualized_sharpe(diff) if not is_base else None,
+                "win_%": float(np.mean(diff > 0) * 100) if not is_base else None,
+            })
+        needs_seeds = model not in DETERMINISTIC_MODELS and len(members) < min_seeds
+        row["note"] = ("baseline" if key == base_key else
+                       f"⚠ <{min_seeds} seeds" if needs_seeds else "")
+        rows.append(row)
+
+    sort_key = "diff_SR" if base_key is not None else "APS_bps"
+    rows.sort(key=lambda x: (x["note"] != "baseline",
+                             -(x[sort_key] if x.get(sort_key) is not None
+                               and x[sort_key] == x[sort_key] else -np.inf)))
+
+    sm = recs[0].get("split_meta", {})
+    head = (f"Configurations in {results} (split {sm.get('train_weeks', '?')}w, stride "
+            f"{sm.get('minute_stride', '?')}, anchor {sm.get('anchor', '?')}); seeds "
+            f"combined by averaging daily APS"
+            + (f"; paired columns vs the configuration of `{baseline}`" if baseline else "")
+            + ". diff_SR = annualized Sharpe of the daily APS difference.")
+    return rows, _markdown(head, rows, left=("config", "runs", "seed_range", "rows", "note"))
+
+
+def _fmt(v):
+    if v is None:
+        return "–"
+    if isinstance(v, float):
+        if v != v:
+            return "nan"
+        return f"{v:.2e}" if 0 < abs(v) < 1e-3 else f"{v:.3f}" if abs(v) < 100 else f"{v:.0f}"
+    if isinstance(v, int) and not isinstance(v, bool):
+        return f"{v:,}"
+    return str(v).replace("|", "\\|")
+
+
+def _markdown(head, rows, left=("name", "model")):
     cols = list(rows[0].keys())
-
-    def fmt(v):
-        if v is None:
-            return "–"
-        if isinstance(v, float):
-            if v != v:
-                return "nan"
-            return f"{v:.2e}" if 0 < abs(v) < 1e-3 else f"{v:.3f}" if abs(v) < 100 else f"{v:.0f}"
-        if isinstance(v, int) and not isinstance(v, bool):
-            return f"{v:,}"
-        return str(v)
-
     lines = [head, "", "| " + " | ".join(cols) + " |",
-             "|" + "|".join("---" if c in ("name", "model") else "---:" for c in cols) + "|"]
-    lines += ["| " + " | ".join(fmt(row[c]) for c in cols) + " |" for row in rows]
-    return rows, "\n".join(lines)
+             "|" + "|".join("---" if c in left else "---:" for c in cols) + "|"]
+    lines += ["| " + " | ".join(_fmt(row[c]) for c in cols) + " |" for row in rows]
+    return "\n".join(lines)
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m experiment.table", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--split", required=True)
+    p.add_argument("--split", default=None,
+                   help="split dir (required unless --by-config with --results)")
+    p.add_argument("--by-config", action="store_true",
+                   help="one row per configuration, seeds combined; reads records only "
+                        "(no dataset access); --baseline is then a run name")
+    p.add_argument("--min-seeds", type=int, default=3,
+                   help="--by-config: flag configurations with fewer seeds")
     p.add_argument("--results", default=None, help="default: results/<split dir name>")
     p.add_argument("--baseline", default=None, help="run dir for the paired columns")
     p.add_argument("--extra", action="append", default=[],
@@ -113,8 +244,17 @@ def main(argv=None) -> int:
     p.add_argument("--data", default=None, help="dataset root (default: the split's)")
     p.add_argument("--md", default=None, help="also write the markdown table here")
     a = p.parse_args(argv)
+    if not (a.results or a.split):
+        raise SystemExit("pass --split (or --results with --by-config)")
+    if not a.by_config and not a.split:
+        raise SystemExit("--split is required for the per-run table")
     results = a.results or str(REPO / "results" / Path(a.split).resolve().name)
-    _, md = build_table(a.split, results, a.baseline, a.extra, a.data)
+    if a.by_config:
+        if a.extra:
+            raise SystemExit("--extra needs dataset scoring; use the per-run table for it")
+        _, md = build_config_table(results, a.baseline, a.min_seeds)
+    else:
+        _, md = build_table(a.split, results, a.baseline, a.extra, a.data)
     print(md)
     if a.md:
         Path(a.md).write_text(md + "\n", encoding="utf-8")
