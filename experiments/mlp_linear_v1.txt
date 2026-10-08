@@ -1,0 +1,164 @@
+# Linear MLP batch: an MLP with NO hidden layer is a linear model, the same
+# kind of function as ridge. If training works, it should land close to the
+# ridge baseline; if not, the problem is how the MLP is trained, not its size.
+# The winning setting is the starting point for adding hidden layers.
+#
+# Grid (36 configurations x 3 seeds = 108 runs), everything else at the
+# models/mlp.py defaults (all fit rows, last 15 days held out for early
+# stopping, patience 3):
+#   learning rate   1e-4, 3e-4, 1e-3     (current MLP: 1e-3, training unstable)
+#   weight decay    0, 1e-5, 1e-4        (plays the role of ridge's lambda)
+#   batch size      4096, 16384          (bigger = smoother updates)
+#   input clipping  +-5 sigma, off       (ridge sees unclipped inputs; "off" = 1e6)
+#   max_epochs 30 (from 20): small learning rates may need more passes.
+# Differences from ridge that remain by design: the linear MLP has an
+# intercept, standardized inputs, and early stopping instead of a fixed lambda.
+#
+# Compare against ridge_eqall (same rows):
+#   python -m experiment.table --results results/v2_52w --by-config --baseline ridge_eqall
+# Submit (linear models need little memory; 8 CPUs lets more run at once):
+#   scripts/submit_experiment.sh experiments/mlp_linear_v1.txt -c 8 --mem 64G
+# lr 1e-4, weight decay 0, batch 4k, clip ±5σ
+lin_lr1e-4_wd0_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd0_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd0_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 0, batch 4k, no clipping
+lin_lr1e-4_wd0_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd0_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd0_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 0, batch 16k, clip ±5σ
+lin_lr1e-4_wd0_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd0_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd0_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 0, batch 16k, no clipping
+lin_lr1e-4_wd0_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd0_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd0_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-5, batch 4k, clip ±5σ
+lin_lr1e-4_wd1e-5_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-5_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-5_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-5, batch 4k, no clipping
+lin_lr1e-4_wd1e-5_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-5_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-5_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-5, batch 16k, clip ±5σ
+lin_lr1e-4_wd1e-5_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-5_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-5_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-5, batch 16k, no clipping
+lin_lr1e-4_wd1e-5_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-5_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-5_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-4, batch 4k, clip ±5σ
+lin_lr1e-4_wd1e-4_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-4_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-4_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-4, batch 4k, no clipping
+lin_lr1e-4_wd1e-4_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-4_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-4_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-4, batch 16k, clip ±5σ
+lin_lr1e-4_wd1e-4_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-4_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-4_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-4, weight decay 1e-4, batch 16k, no clipping
+lin_lr1e-4_wd1e-4_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-4_wd1e-4_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-4_wd1e-4_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 0, batch 4k, clip ±5σ
+lin_lr3e-4_wd0_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd0_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd0_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 0, batch 4k, no clipping
+lin_lr3e-4_wd0_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd0_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd0_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 0, batch 16k, clip ±5σ
+lin_lr3e-4_wd0_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd0_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd0_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 0, batch 16k, no clipping
+lin_lr3e-4_wd0_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd0_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd0_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-5, batch 4k, clip ±5σ
+lin_lr3e-4_wd1e-5_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-5_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-5_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-5, batch 4k, no clipping
+lin_lr3e-4_wd1e-5_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-5_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-5_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-5, batch 16k, clip ±5σ
+lin_lr3e-4_wd1e-5_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-5_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-5_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-5, batch 16k, no clipping
+lin_lr3e-4_wd1e-5_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-5_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-5_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-4, batch 4k, clip ±5σ
+lin_lr3e-4_wd1e-4_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-4_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-4_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-4, batch 4k, no clipping
+lin_lr3e-4_wd1e-4_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-4_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-4_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-4, batch 16k, clip ±5σ
+lin_lr3e-4_wd1e-4_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-4_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-4_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 3e-4, weight decay 1e-4, batch 16k, no clipping
+lin_lr3e-4_wd1e-4_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr3e-4_wd1e-4_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr3e-4_wd1e-4_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.0003, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 0, batch 4k, clip ±5σ
+lin_lr1e-3_wd0_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd0_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd0_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 0, batch 4k, no clipping
+lin_lr1e-3_wd0_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd0_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd0_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 0, batch 16k, clip ±5σ
+lin_lr1e-3_wd0_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd0_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd0_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 0, batch 16k, no clipping
+lin_lr1e-3_wd0_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd0_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd0_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-5, batch 4k, clip ±5σ
+lin_lr1e-3_wd1e-5_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-5_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-5_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-5, batch 4k, no clipping
+lin_lr1e-3_wd1e-5_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-5_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-5_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-5, batch 16k, clip ±5σ
+lin_lr1e-3_wd1e-5_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-5_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-5_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-5, batch 16k, no clipping
+lin_lr1e-3_wd1e-5_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-5_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-5_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 1e-05, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-4, batch 4k, clip ±5σ
+lin_lr1e-3_wd1e-4_bs4k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-4_bs4k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-4_bs4k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-4, batch 4k, no clipping
+lin_lr1e-3_wd1e-4_bs4k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-4_bs4k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-4_bs4k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 4096, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-4, batch 16k, clip ±5σ
+lin_lr1e-3_wd1e-4_bs16k_c5_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-4_bs16k_c5_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-4_bs16k_c5_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 5.0, "max_epochs": 30, "in_ram": false, "seed": 2}
+# lr 1e-3, weight decay 1e-4, batch 16k, no clipping
+lin_lr1e-3_wd1e-4_bs16k_noclip_s0  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 0}
+lin_lr1e-3_wd1e-4_bs16k_noclip_s1  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 1}
+lin_lr1e-3_wd1e-4_bs16k_noclip_s2  mlp  {"hidden": [], "lr": 0.001, "weight_decay": 0.0001, "batch_size": 16384, "clip_sigma": 1000000.0, "max_epochs": 30, "in_ram": false, "seed": 2}

@@ -1,0 +1,6 @@
+# Complete the standard comparison on the 52w split: LightGBM on all fit rows
+# has one seed (lgbm_allrows); add seeds 1 and 2. The table groups them with
+# lgbm_allrows automatically. Baseline: ridge_eqall (= ridge {"es_days": 14}).
+# Submit: scripts/submit_experiment.sh experiments/standard_seeds_v1.txt
+lgbm_allrows_s1   lgbm  {"max_rows": 0, "seed": 1}
+lgbm_allrows_s2   lgbm  {"max_rows": 0, "seed": 2}
