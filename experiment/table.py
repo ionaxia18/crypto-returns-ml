@@ -120,11 +120,11 @@ def _resolve_now(rec: dict) -> dict:
 
 
 def config_key(rec: dict) -> tuple[str, str]:
-    """Group by the model's full effective settings (``resolved_config``, which
-    includes defaults); older records get them rebuilt via ``_resolve_now``."""
-    if "resolved_config" not in rec:
-        rec["resolved_config"] = _resolve_now(rec)
-    return rec["model"], _canon(rec["resolved_config"])
+    """Group by the model's full effective settings. Recorded values win;
+    settings a record predates (options added later, which always default to
+    the old behaviour) are filled in from the current code's defaults."""
+    full = {**_resolve_now(rec), **rec.get("resolved_config", {})}
+    return rec["model"], _canon(full)
 
 
 def build_config_table(results, baseline=None, min_seeds=3):

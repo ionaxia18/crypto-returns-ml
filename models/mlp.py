@@ -8,9 +8,17 @@
   contiguous chunks of ``chunk_rows`` in random order and shuffles within
   the chunk, so reads stay sequential. ``in_ram=True`` loads the fit rows
   once instead (fastest when they fit).
-- Early stopping is in-window, as in models/lgbm.py: pooled weighted APS on
-  the most recent ``es_days`` training dates after an ``embargo_days`` gap;
-  the best epoch's weights are kept.
+- Early stopping is in-window, as in models/lgbm.py: the most recent
+  ``es_days`` training dates after an ``embargo_days`` gap are scored after
+  every epoch and the best epoch's weights are kept. ``es_metric`` picks the
+  score: pooled weighted APS (``"aps"``, default) or weighted MSE on the
+  holdout (``"loss"``, a smoother signal than 14-day APS).
+- Noise controls (off by default, i.e. the original behaviour):
+  ``lr_schedule="cosine"`` decays the learning rate per step from ``lr`` to
+  ``lr * lr_min_frac`` over ``max_epochs``; ``weight_avg="ema"`` keeps an
+  exponential moving average of the weights (decay ``ema_decay`` per step,
+  warmed up as min(decay, (1+t)/(10+t))) and evaluates/keeps that average
+  instead of the last, jittery SGD snapshot.
 
 Run:
     f522kit run --data $DATA_ROOT --model models/mlp.py:MyModel \
@@ -60,7 +68,9 @@ class MyModel:
     def __init__(self, hidden=(256, 128), dropout=0.1, lr=1e-3, weight_decay=1e-5,
                  batch_size=4096, max_epochs=20, patience=3, es_days=14,
                  embargo_days=1, es_frac=0.1, max_rows=0, chunk_rows=262_144,
-                 in_ram=True, clip_sigma=5.0, stats_rows=500_000, threads=0, seed=0):
+                 in_ram=True, clip_sigma=5.0, stats_rows=500_000, threads=0, seed=0,
+                 lr_schedule="constant", lr_min_frac=0.01, weight_avg="none",
+                 ema_decay=0.9998, es_metric="aps"):
         self.hidden = tuple(int(h) for h in hidden)
         self.dropout = float(dropout)
         self.lr = float(lr)
@@ -79,6 +89,17 @@ class MyModel:
         self.threads = int(threads) or int(os.environ.get("SLURM_CPUS_PER_TASK", 0)) \
             or (os.cpu_count() or 1)
         self.seed = int(seed)
+        if lr_schedule not in ("constant", "cosine"):
+            raise ValueError(f"lr_schedule must be constant|cosine, got {lr_schedule!r}")
+        if weight_avg not in ("none", "ema"):
+            raise ValueError(f"weight_avg must be none|ema, got {weight_avg!r}")
+        if es_metric not in ("aps", "loss"):
+            raise ValueError(f"es_metric must be aps|loss, got {es_metric!r}")
+        self.lr_schedule = lr_schedule
+        self.lr_min_frac = float(lr_min_frac)
+        self.weight_avg = weight_avg
+        self.ema_decay = float(ema_decay)
+        self.es_metric = es_metric
 
     # -- kit path -------------------------------------------------------------
     def fit(self, train):
@@ -131,7 +152,13 @@ class MyModel:
         self.sd = np.where(sd > 1e-12, sd, 1.0).astype(np.float32)
         del xs
 
-        Xfit = self._transform(X[fit_idx]) if self.in_ram else None
+        Xfit = None
+        if self.in_ram:
+            # Fill chunk by chunk: one float32 copy of the fit rows (~3.9 GB per
+            # million rows), no full-size temporaries. Same values as streaming.
+            Xfit = np.empty((fit_idx.size, k), dtype=np.float32)
+            for s in range(0, fit_idx.size, self.chunk_rows):
+                Xfit[s:s + self.chunk_rows] = self._transform(X[fit_idx[s:s + self.chunk_rows]])
         yt = (y[fit_idx] / self.y_scale).astype(np.float32)
         wt = (w[fit_idx] / w_scale).astype(np.float32)
         Xh = torch.from_numpy(self._transform(X[hold_start:]))
@@ -142,6 +169,13 @@ class MyModel:
         best, best_state, bad, history = -np.inf, None, 0, []
         n_fit = fit_idx.size
         chunks = np.arange(0, n_fit, self.chunk_rows)
+        # Steps per epoch (each chunk's last batch may be short) -> cosine horizon.
+        sizes = np.minimum(chunks + self.chunk_rows, n_fit) - chunks
+        total_steps = int(self.max_epochs * np.ceil(sizes / self.batch_size).sum())
+        step = 0
+        ema = ([p.detach().clone() for p in net.parameters()]
+               if self.weight_avg == "ema" else None)
+        eval_net = copy.deepcopy(net) if ema is not None else net
         for epoch in range(self.max_epochs):
             net.train()
             loss_sum = 0.0
@@ -157,26 +191,48 @@ class MyModel:
                     yb = yb_all[b:b + self.batch_size]
                     wb = wb_all[b:b + self.batch_size]
                     loss = (wb * (net(xb).squeeze(1) - yb) ** 2).sum() / wb.sum()
+                    if self.lr_schedule == "cosine":
+                        frac = min(step / max(total_steps, 1), 1.0)
+                        lr_t = self.lr * (self.lr_min_frac + (1.0 - self.lr_min_frac)
+                                          * 0.5 * (1.0 + np.cos(np.pi * frac)))
+                        for g in opt.param_groups:
+                            g["lr"] = lr_t
                     opt.zero_grad(set_to_none=True)
                     loss.backward()
                     opt.step()
+                    if ema is not None:
+                        d = min(self.ema_decay, (1.0 + step) / (10.0 + step))
+                        with torch.no_grad():
+                            for e, p in zip(ema, net.parameters()):
+                                e.mul_(d).add_(p.detach(), alpha=1.0 - d)
+                    step += 1
                     loss_sum += loss.item() * xb.shape[0]
-            aps = pooled_aps(self._forward(net, Xh), yh, wh)
+            if ema is not None:
+                with torch.no_grad():
+                    for q, e in zip(eval_net.parameters(), ema):
+                        q.copy_(e)
+            pred_h = self._forward(eval_net, Xh)
+            aps = pooled_aps(pred_h, yh, wh)
+            hold_loss = float(np.sum(wh * (pred_h - yh / self.y_scale) ** 2) / np.sum(wh))
+            score = aps if self.es_metric == "aps" else -hold_loss
             history.append({"epoch": epoch, "train_loss": loss_sum / n_fit,
-                            "holdout_aps_bps": aps * 1e4})
-            if aps > best:
-                best, best_state, bad = aps, copy.deepcopy(net.state_dict()), 0
+                            "holdout_aps_bps": aps * 1e4, "holdout_loss": hold_loss,
+                            "lr": opt.param_groups[0]["lr"]})
+            if score > best:
+                best, best_state, bad = score, copy.deepcopy(eval_net.state_dict()), 0
+                best_epoch = epoch
             else:
                 bad += 1
                 if bad >= self.patience:
                     break
-        net.load_state_dict(best_state)
-        self.net = net.eval()
+        eval_net.load_state_dict(best_state)
+        self.net = eval_net.eval()
         return {"n_fit_rows": int(n_fit), "fit_rows_sha": rows_fingerprint(fit_idx),
                 "n_holdout_rows": int(n - hold_start),
-                "best_epoch": int(np.argmax([h["holdout_aps_bps"] for h in history])),
-                "holdout_aps_bps": best * 1e4, "history": history,
-                "y_scale": self.y_scale}
+                "best_epoch": int(best_epoch), "es_metric": self.es_metric,
+                "holdout_aps_bps": history[best_epoch]["holdout_aps_bps"],
+                "holdout_loss": history[best_epoch]["holdout_loss"],
+                "history": history, "y_scale": self.y_scale}
 
     @staticmethod
     def _forward(net, xt):

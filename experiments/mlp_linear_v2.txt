@@ -1,0 +1,119 @@
+# Linear MLP, round 2: can a no-hidden-layer MLP match ridge once training
+# noise is controlled? Round 1 (mlp_linear_v1.txt) peaked at 1.63 vs ridge 1.76
+# (lr 1e-4, batch 4096, no clipping); holdout APS swung wildly between epochs
+# and early stopping kept lucky snapshots after only 4-8 epochs.
+#
+# Grid (24 configurations x 3 seeds = 72 runs):
+#   learning rate   1e-5, 3e-5, 1e-4    round 1 kept improving down to 1e-4
+#   lr_schedule     constant, cosine    cosine: decay to 1% of lr over max_epochs
+#   weight_avg      none, ema           ema: keep a running average of the weights
+#                                       (decay 0.9998/step, ~1 epoch at batch 4096)
+#   es_metric       aps, loss           stop on holdout APS or the smoother holdout loss
+# Fixed, from round 1: no hidden layer, no input clipping, batch 4096, weight
+# decay 0 (no measurable effect), max_epochs 30, patience 5 (was 3).
+# Reference point: lr 1e-4 / constant / none / aps = round 1's best setting
+# (patience 5 instead of 3).
+#
+# in_ram: fit rows held in memory (~76 GB), ~5x faster than streaming and
+# numerically identical; needs the default --mem 128G.
+#
+# Compare against ridge_eqall (same rows):
+#   python -m experiment.table --results results/v2_52w --by-config --baseline ridge_eqall
+# Submit:
+#   scripts/submit_experiment.sh experiments/mlp_linear_v2.txt -c 8
+# lr 1e-5, constant schedule, weights: last snapshot, stop on holdout aps
+lin2_lr1e-5_con_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr1e-5_con_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr1e-5_con_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 1e-5, constant schedule, weights: last snapshot, stop on holdout loss
+lin2_lr1e-5_con_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr1e-5_con_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr1e-5_con_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 1e-5, constant schedule, weights: EMA average, stop on holdout aps
+lin2_lr1e-5_con_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr1e-5_con_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr1e-5_con_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 1e-5, constant schedule, weights: EMA average, stop on holdout loss
+lin2_lr1e-5_con_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr1e-5_con_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr1e-5_con_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 2}
+# lr 1e-5, cosine schedule, weights: last snapshot, stop on holdout aps
+lin2_lr1e-5_cos_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr1e-5_cos_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr1e-5_cos_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 1e-5, cosine schedule, weights: last snapshot, stop on holdout loss
+lin2_lr1e-5_cos_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr1e-5_cos_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr1e-5_cos_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 1e-5, cosine schedule, weights: EMA average, stop on holdout aps
+lin2_lr1e-5_cos_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr1e-5_cos_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr1e-5_cos_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 1e-5, cosine schedule, weights: EMA average, stop on holdout loss
+lin2_lr1e-5_cos_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr1e-5_cos_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr1e-5_cos_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 1e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 2}
+# lr 3e-5, constant schedule, weights: last snapshot, stop on holdout aps
+lin2_lr3e-5_con_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr3e-5_con_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr3e-5_con_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 3e-5, constant schedule, weights: last snapshot, stop on holdout loss
+lin2_lr3e-5_con_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr3e-5_con_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr3e-5_con_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 3e-5, constant schedule, weights: EMA average, stop on holdout aps
+lin2_lr3e-5_con_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr3e-5_con_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr3e-5_con_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 3e-5, constant schedule, weights: EMA average, stop on holdout loss
+lin2_lr3e-5_con_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr3e-5_con_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr3e-5_con_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 2}
+# lr 3e-5, cosine schedule, weights: last snapshot, stop on holdout aps
+lin2_lr3e-5_cos_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr3e-5_cos_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr3e-5_cos_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 3e-5, cosine schedule, weights: last snapshot, stop on holdout loss
+lin2_lr3e-5_cos_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr3e-5_cos_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr3e-5_cos_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 3e-5, cosine schedule, weights: EMA average, stop on holdout aps
+lin2_lr3e-5_cos_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr3e-5_cos_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr3e-5_cos_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 3e-5, cosine schedule, weights: EMA average, stop on holdout loss
+lin2_lr3e-5_cos_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr3e-5_cos_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr3e-5_cos_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 3e-05, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 2}
+# lr 1e-4, constant schedule, weights: last snapshot, stop on holdout aps
+lin2_lr1e-4_con_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr1e-4_con_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr1e-4_con_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 1e-4, constant schedule, weights: last snapshot, stop on holdout loss
+lin2_lr1e-4_con_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr1e-4_con_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr1e-4_con_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 1e-4, constant schedule, weights: EMA average, stop on holdout aps
+lin2_lr1e-4_con_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr1e-4_con_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr1e-4_con_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 1e-4, constant schedule, weights: EMA average, stop on holdout loss
+lin2_lr1e-4_con_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr1e-4_con_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr1e-4_con_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "seed": 2}
+# lr 1e-4, cosine schedule, weights: last snapshot, stop on holdout aps
+lin2_lr1e-4_cos_none_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 0}
+lin2_lr1e-4_cos_none_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 1}
+lin2_lr1e-4_cos_none_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "aps", "seed": 2}
+# lr 1e-4, cosine schedule, weights: last snapshot, stop on holdout loss
+lin2_lr1e-4_cos_none_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 0}
+lin2_lr1e-4_cos_none_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 1}
+lin2_lr1e-4_cos_none_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "none", "es_metric": "loss", "seed": 2}
+# lr 1e-4, cosine schedule, weights: EMA average, stop on holdout aps
+lin2_lr1e-4_cos_ema_aps_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 0}
+lin2_lr1e-4_cos_ema_aps_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 1}
+lin2_lr1e-4_cos_ema_aps_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "aps", "seed": 2}
+# lr 1e-4, cosine schedule, weights: EMA average, stop on holdout loss
+lin2_lr1e-4_cos_ema_loss_s0  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 0}
+lin2_lr1e-4_cos_ema_loss_s1  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 1}
+lin2_lr1e-4_cos_ema_loss_s2  mlp  {"hidden": [], "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "lr": 0.0001, "lr_schedule": "cosine", "weight_avg": "ema", "es_metric": "loss", "seed": 2}

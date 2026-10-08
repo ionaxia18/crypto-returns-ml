@@ -283,3 +283,52 @@ def test_config_table_resolves_records_without_settings(split3, tmp_path):
     (res / "legacy" / "record.json").write_text(json.dumps(old))
     rows, _ = xtable.build_config_table(res, baseline="base")
     assert {r["runs"] for r in rows} == {"base", "legacy, new"}
+
+
+@pytest.mark.parametrize("opts", [
+    {"lr_schedule": "cosine"},
+    {"weight_avg": "ema", "ema_decay": 0.99},
+    {"es_metric": "loss"},
+    {"lr_schedule": "cosine", "weight_avg": "ema", "ema_decay": 0.99, "es_metric": "loss"},
+])
+def test_mlp_noise_controls_train_and_find_signal(split3, tmp_path, opts):
+    base = {"hidden": [], "lr": 1e-2, "es_days": 5, "batch_size": 64, "max_epochs": 8,
+            "patience": 8, "threads": 1}
+    rec = quiet(xrun.run_one, split3.root, "mlp", {**base, **opts}, "m", tmp_path)
+    fi = rec["fit_info"]
+    assert rec["report"]["windows"]["val"]["COR_mean"] > 0.2
+    h = fi["history"]
+    assert all("holdout_loss" in e and "lr" in e for e in h)
+    pick = (np.argmax([e["holdout_aps_bps"] for e in h]) if fi["es_metric"] == "aps"
+            else np.argmin([e["holdout_loss"] for e in h]))
+    assert fi["best_epoch"] == pick
+    if opts.get("lr_schedule") == "cosine":
+        assert h[-1]["lr"] < h[0]["lr"] < 1e-2          # decays per step
+    else:
+        assert all(e["lr"] == 1e-2 for e in h)
+
+
+def test_mlp_default_options_unchanged(split3, tmp_path):
+    """Explicit defaults for the new options == not passing them (same run)."""
+    cfg = {"hidden": [8], "es_days": 5, "max_epochs": 2, "threads": 1}
+    a = quiet(xrun.run_one, split3.root, "mlp", cfg, "a", tmp_path)
+    b = quiet(xrun.run_one, split3.root, "mlp", {**cfg, "lr_schedule": "constant",
+              "weight_avg": "none", "es_metric": "aps"}, "b", tmp_path)
+    assert a["report"]["daily_APS_bps"] == b["report"]["daily_APS_bps"]
+    # ...and the table treats an old record lacking the new keys as the same config.
+    old = dict(a, name="old", resolved_config={k: v for k, v in a["resolved_config"].items()
+                                                if k not in ("lr_schedule", "weight_avg",
+                                                             "es_metric", "ema_decay",
+                                                             "lr_min_frac")})
+    (tmp_path / "old").mkdir()
+    (tmp_path / "old" / "record.json").write_text(json.dumps(old))
+    rows, _ = xtable.build_config_table(tmp_path)
+    assert {r["runs"] for r in rows} == {"a, b, old"}
+
+
+def test_mlp_in_ram_matches_streaming(split3, tmp_path):
+    """in_ram only changes data feeding: identical predictions either way."""
+    cfg = {"hidden": [8], "es_days": 5, "max_epochs": 3, "threads": 1, "chunk_rows": 300}
+    a = quiet(xrun.run_one, split3.root, "mlp", {**cfg, "in_ram": True}, "ram", tmp_path)
+    b = quiet(xrun.run_one, split3.root, "mlp", {**cfg, "in_ram": False}, "stream", tmp_path)
+    assert a["report"]["daily_APS_bps"] == b["report"]["daily_APS_bps"]
