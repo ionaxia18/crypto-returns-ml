@@ -1,0 +1,165 @@
+{
+  "name": "lin_lr1e-4_wd0_bs16k_c5_s1",
+  "model": "mlp",
+  "spec": "/scratch/users/ionaxia/core980-work/crypto-returns-ml/models/mlp.py:MyModel",
+  "config": {
+    "threads": 9,
+    "hidden": [],
+    "lr": 0.0001,
+    "weight_decay": 0.0,
+    "batch_size": 16384,
+    "clip_sigma": 5.0,
+    "max_epochs": 30,
+    "in_ram": false,
+    "seed": 1
+  },
+  "split": "/scratch/users/ionaxia/core980-work/experiment/v2_52w",
+  "split_meta": {
+    "split_version": 2,
+    "anchor": "2024-04-14",
+    "train_weeks": 52,
+    "minute_stride": 5,
+    "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439"
+  },
+  "cpus": 9,
+  "host": "sh02-01n16.int",
+  "platform": "Linux-3.10.0-1160.156.1.el7.tuxcare.els4.x86_64-x86_64-with-glibc2.17",
+  "slurm_job": "46953282",
+  "git": "unknown",
+  "started": "2026-10-07T19:22:56",
+  "fit_info": {
+    "n_fit_rows": 19305374,
+    "fit_rows_sha": "3fa0f1bf4b92",
+    "n_holdout_rows": 990132,
+    "best_epoch": 8,
+    "holdout_aps_bps": 1.6174872644109572,
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": 1.083821180608909,
+        "holdout_aps_bps": 0.9913162647494509
+      },
+      {
+        "epoch": 1,
+        "train_loss": 1.0638148716336453,
+        "holdout_aps_bps": 0.9968242581852278
+      },
+      {
+        "epoch": 2,
+        "train_loss": 1.0630294328006837,
+        "holdout_aps_bps": 1.1820247875554823
+      },
+      {
+        "epoch": 3,
+        "train_loss": 1.062303432134754,
+        "holdout_aps_bps": 0.591510370582369
+      },
+      {
+        "epoch": 4,
+        "train_loss": 1.0623591903526075,
+        "holdout_aps_bps": 1.3753969922616347
+      },
+      {
+        "epoch": 5,
+        "train_loss": 1.0622580922751972,
+        "holdout_aps_bps": 0.9580093621957941
+      },
+      {
+        "epoch": 6,
+        "train_loss": 1.062079290409619,
+        "holdout_aps_bps": 0.9858781443649011
+      },
+      {
+        "epoch": 7,
+        "train_loss": 1.0621540434997458,
+        "holdout_aps_bps": 1.5184016290249205
+      },
+      {
+        "epoch": 8,
+        "train_loss": 1.0619546668032007,
+        "holdout_aps_bps": 1.6174872644109572
+      },
+      {
+        "epoch": 9,
+        "train_loss": 1.0620766823446968,
+        "holdout_aps_bps": 1.602117456474865
+      },
+      {
+        "epoch": 10,
+        "train_loss": 1.0617128450706392,
+        "holdout_aps_bps": 1.5968296885197193
+      },
+      {
+        "epoch": 11,
+        "train_loss": 1.061915682008061,
+        "holdout_aps_bps": 1.598031183238489
+      }
+    ],
+    "y_scale": 0.004568908816915706
+  },
+  "report": {
+    "windows": {
+      "val": {
+        "n_dates": 28,
+        "start_date": "2024-04-09",
+        "end_date": "2024-05-06",
+        "APS_mean_bps": 1.653764802854665,
+        "COR_mean": 0.035463000834322016,
+        "AR_mean": 0.5073250497128737,
+        "APS_SR": 32.174881381744605,
+        "AS_mean": 0.0003177191342026443,
+        "RS_mean": 0.004580588618391495
+      }
+    },
+    "guardrails": {
+      "val": {
+        "n_dates": 28,
+        "clip_rate": 0.0,
+        "pred_rms_weighted_rows": 0.0003486033332350859
+      }
+    },
+    "daily_APS_bps": [
+      1.0734378149018515,
+      2.0651012827221784,
+      1.1927686861787947,
+      5.295746233775269,
+      2.9768738495279314,
+      2.6482318517322314,
+      1.6900646367295225,
+      2.0170723056046405,
+      2.1145630211529243,
+      1.4067859592732008,
+      2.0378111574833375,
+      1.8391566121770964,
+      2.7546130026517255,
+      1.8056002456261742,
+      0.2174169837891544,
+      1.4326385657556113,
+      0.936250891141793,
+      0.8930700141130616,
+      1.0279242195368614,
+      0.7013733349256803,
+      0.6849394821268534,
+      1.4932799422323448,
+      0.7899300487334965,
+      1.0521787187772411,
+      2.034205394705622,
+      1.9274627534836708,
+      1.2948707037395109,
+      0.902046767332852
+    ]
+  },
+  "baseline": null,
+  "x_in_ram": false,
+  "timing_s": {
+    "load": 0.53,
+    "fit": 5949.91,
+    "predict": 151.69,
+    "total": 6106.89
+  },
+  "peak_rss_gb": {
+    "after_fit": 75.114,
+    "final": 75.114
+  },
+  "finished": "2026-10-07T21:04:43"
+}

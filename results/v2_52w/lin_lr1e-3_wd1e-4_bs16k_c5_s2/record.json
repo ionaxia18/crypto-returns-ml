@@ -1,0 +1,140 @@
+{
+  "name": "lin_lr1e-3_wd1e-4_bs16k_c5_s2",
+  "model": "mlp",
+  "spec": "/scratch/users/ionaxia/core980-work/crypto-returns-ml/models/mlp.py:MyModel",
+  "config": {
+    "threads": 9,
+    "hidden": [],
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "batch_size": 16384,
+    "clip_sigma": 5.0,
+    "max_epochs": 30,
+    "in_ram": false,
+    "seed": 2
+  },
+  "split": "/scratch/users/ionaxia/core980-work/experiment/v2_52w",
+  "split_meta": {
+    "split_version": 2,
+    "anchor": "2024-04-14",
+    "train_weeks": 52,
+    "minute_stride": 5,
+    "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439"
+  },
+  "cpus": 9,
+  "host": "sh03-08n31.int",
+  "platform": "Linux-3.10.0-1160.156.1.el7.tuxcare.els4.x86_64-x86_64-with-glibc2.17",
+  "slurm_job": "46958339",
+  "git": "unknown",
+  "started": "2026-10-07T20:44:43",
+  "fit_info": {
+    "n_fit_rows": 19305374,
+    "fit_rows_sha": "3fa0f1bf4b92",
+    "n_holdout_rows": 990132,
+    "best_epoch": 3,
+    "holdout_aps_bps": 1.2411162776363645,
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": 1.0687924110166032,
+        "holdout_aps_bps": 0.7946701410435973
+      },
+      {
+        "epoch": 1,
+        "train_loss": 1.066070854959276,
+        "holdout_aps_bps": 0.24529383563407428
+      },
+      {
+        "epoch": 2,
+        "train_loss": 1.0655997030056357,
+        "holdout_aps_bps": 0.9879534750798358
+      },
+      {
+        "epoch": 3,
+        "train_loss": 1.065805852438464,
+        "holdout_aps_bps": 1.2411162776363645
+      },
+      {
+        "epoch": 4,
+        "train_loss": 1.0656568657115213,
+        "holdout_aps_bps": 0.9598548533003864
+      },
+      {
+        "epoch": 5,
+        "train_loss": 1.0655888378964788,
+        "holdout_aps_bps": 0.79790894039254
+      },
+      {
+        "epoch": 6,
+        "train_loss": 1.0657210790852858,
+        "holdout_aps_bps": 0.5384358514678708
+      }
+    ],
+    "y_scale": 0.004568908816915706
+  },
+  "report": {
+    "windows": {
+      "val": {
+        "n_dates": 28,
+        "start_date": "2024-04-09",
+        "end_date": "2024-05-06",
+        "APS_mean_bps": 1.1029072909411128,
+        "COR_mean": 0.024491906934865835,
+        "AR_mean": 0.18285970075901753,
+        "APS_SR": 27.237237548093585,
+        "AS_mean": 0.0005973653040534574,
+        "RS_mean": 0.004580588618391495
+      }
+    },
+    "guardrails": {
+      "val": {
+        "n_dates": 28,
+        "clip_rate": 0.0,
+        "pred_rms_weighted_rows": 0.0006131328926612237
+      }
+    },
+    "daily_APS_bps": [
+      0.1706419934414363,
+      0.12803760427453692,
+      0.4132346816672332,
+      2.9631402358428023,
+      1.68288291023472,
+      1.3047667177641802,
+      0.372153125547395,
+      2.121695418652009,
+      1.759346182862489,
+      0.5970293827009595,
+      2.266985074993445,
+      1.2813867672176515,
+      2.134048460476817,
+      1.3767300792809,
+      -0.6668307743872778,
+      1.210407536945204,
+      0.10705296616207526,
+      1.0192468383003883,
+      1.4316974982114878,
+      1.202032009889878,
+      0.9612041104775877,
+      0.9941103521235084,
+      0.5847291956009465,
+      0.4165373303740664,
+      1.4616634394894938,
+      1.3677307578979265,
+      1.0340741398328333,
+      1.185670110476469
+    ]
+  },
+  "baseline": null,
+  "x_in_ram": false,
+  "timing_s": {
+    "load": 0.27,
+    "fit": 1621.78,
+    "predict": 77.02,
+    "total": 1702.0
+  },
+  "peak_rss_gb": {
+    "after_fit": 87.807,
+    "final": 87.807
+  },
+  "finished": "2026-10-07T21:13:05"
+}
