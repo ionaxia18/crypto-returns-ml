@@ -1,0 +1,43 @@
+# MLP ladder + ridge lambda sweep (52w split, identical rows for every run).
+#
+# Ladder: start from the round-2 winner -- a linear MLP (no hidden layer) with
+# lr 3e-5, constant schedule, EMA weight averaging, no input clipping: APS 1.86
+# vs ridge 1.76 (lin2_lr3e-5_con_ema_*, already in results) -- and add hidden
+# layers: [16], [64], [256], [256, 128]. Question: does nonlinearity beat 1.86?
+# Stopping on holdout loss (identical to APS for the linear model, and the
+# smoother signal for bigger networks). 4 sizes x 3 seeds = 12 runs.
+#
+# Lambda sweep: ridge with es_days 14 at lambda 0.03 .. 10 (normalized ridge:
+# features scaled to unit diagonal, so lambda = 1 doubles it). Question: is
+# the linear MLP's +0.10 over ridge just stronger regularization? 6 runs,
+# deterministic (no seeds).
+#
+# Compare everything against ridge_eqall, or against the linear MLP winner:
+#   python -m experiment.table --results results/v2_52w --by-config --baseline ridge_eqall
+#   python -m experiment.table --results results/v2_52w --by-config --baseline lin2_lr3e-5_con_ema_loss_s0
+# Submit (16 CPUs for the bigger networks; in-RAM data needs the 128G default):
+#   scripts/submit_experiment.sh experiments/mlp_ladder_v1.txt
+# --- MLP ladder: add hidden layers to the winning linear setup ---
+# hidden [16] (dropout 0.1 between layers, the default)
+ladder_h16_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [16], "seed": 0}
+ladder_h16_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [16], "seed": 1}
+ladder_h16_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [16], "seed": 2}
+# hidden [64] (dropout 0.1 between layers, the default)
+ladder_h64_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 0}
+ladder_h64_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 1}
+ladder_h64_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 2}
+# hidden [256] (dropout 0.1 between layers, the default)
+ladder_h256_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256], "seed": 0}
+ladder_h256_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256], "seed": 1}
+ladder_h256_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256], "seed": 2}
+# hidden [256, 128] (dropout 0.1 between layers, the default)
+ladder_h256x128_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 0}
+ladder_h256x128_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 1}
+ladder_h256x128_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 2}
+# --- Ridge lambda sweep on the same rows (contract lambda = 0.01 is ridge_eqall) ---
+ridge_lam0.03  ridge  {"es_days": 14, "lam": 0.03}
+ridge_lam0.1  ridge  {"es_days": 14, "lam": 0.1}
+ridge_lam0.3  ridge  {"es_days": 14, "lam": 0.3}
+ridge_lam1  ridge  {"es_days": 14, "lam": 1.0}
+ridge_lam3  ridge  {"es_days": 14, "lam": 3.0}
+ridge_lam10  ridge  {"es_days": 14, "lam": 10.0}
