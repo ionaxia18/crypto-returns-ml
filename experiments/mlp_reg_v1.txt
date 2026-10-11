@@ -1,0 +1,34 @@
+# Regularization follow-up (window 1, v2_52w). The deep batch showed every
+# restraint helps and size does not: dropout 0 -> 2.08, 0.1 -> 2.13, 0.2 -> 2.18;
+# networks peak after 2-4 epochs. Reference: deep_h256x128_do0.2 (2.18).
+# Base settings = that reference (lr 3e-5, constant, EMA, stop on loss, no clip);
+# each line changes one thing. 7 configs x 3 seeds = 21 runs.
+# Read:
+#   python -m experiment.table --results results/v2_52w --by-config --baseline deep_h256x128_do0.2_s0
+# Submit:
+#   scripts/submit_experiment.sh experiments/mlp_reg_v1.txt
+# --- More dropout on 256x128 (0.1 -> 2.13, 0.2 -> 2.18) ---
+reg_h256x128_do0.3_s0  mlp  {"hidden": [256, 128], "dropout": 0.3, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128_do0.3_s1  mlp  {"hidden": [256, 128], "dropout": 0.3, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128_do0.3_s2  mlp  {"hidden": [256, 128], "dropout": 0.3, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+reg_h256x128_do0.5_s0  mlp  {"hidden": [256, 128], "dropout": 0.5, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128_do0.5_s1  mlp  {"hidden": [256, 128], "dropout": 0.5, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128_do0.5_s2  mlp  {"hidden": [256, 128], "dropout": 0.5, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+# --- Dropout 0.2 on the deeper nets (dropout 0.1: 3 layers 2.16, 4 layers 2.18) ---
+reg_h256x128x64_do0.2_s0  mlp  {"hidden": [256, 128, 64], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128x64_do0.2_s1  mlp  {"hidden": [256, 128, 64], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128x64_do0.2_s2  mlp  {"hidden": [256, 128, 64], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+reg_h256x128x64x32_do0.2_s0  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128x64x32_do0.2_s1  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128x64x32_do0.2_s2  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+# --- Dropout 0.2 on the small net (64x32 matched 256x128 at dropout 0.1) ---
+reg_h64x32_do0.2_s0  mlp  {"hidden": [64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h64x32_do0.2_s1  mlp  {"hidden": [64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h64x32_do0.2_s2  mlp  {"hidden": [64, 32], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+# --- Weight decay at sizes that matter (1e-5/1e-4 had no effect), on 256x128 dropout 0.2 ---
+reg_h256x128_do0.2_wd1e-2_s0  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.01, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128_do0.2_wd1e-2_s1  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.01, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128_do0.2_wd1e-2_s2  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.01, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+reg_h256x128_do0.2_wd1e-1_s0  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.1, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+reg_h256x128_do0.2_wd1e-1_s1  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.1, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+reg_h256x128_do0.2_wd1e-1_s2  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.1, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}

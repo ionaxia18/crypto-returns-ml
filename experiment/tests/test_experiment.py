@@ -332,3 +332,28 @@ def test_mlp_in_ram_matches_streaming(split3, tmp_path):
     a = quiet(xrun.run_one, split3.root, "mlp", {**cfg, "in_ram": True}, "ram", tmp_path)
     b = quiet(xrun.run_one, split3.root, "mlp", {**cfg, "in_ram": False}, "stream", tmp_path)
     assert a["report"]["daily_APS_bps"] == b["report"]["daily_APS_bps"]
+
+
+def test_second_window_split(data_root, tmp_path):
+    """--val-after picks a different anchor; its val days differ from the default's."""
+    default = xsplit.choose_anchor(Dataset(data_root))
+    other = xsplit.choose_anchor(Dataset(data_root), datetime.date(2023, 1, 3))
+    assert other[0].key < default[0].key
+    assert not set(other[1]) & set(default[1])
+    sp = build_split_at(data_root, tmp_path / "w2", datetime.date(2023, 1, 3))
+    assert sp.val_dates == other[1] and sp.meta["val_after"] == "2023-01-03"
+
+
+def build_split_at(data_root, out, val_after):
+    quiet(xsplit.build_split, data_root, out, train_weeks=2, minute_stride=3, workers=2,
+          val_after=val_after)
+    return xsplit.ExperimentSplit(out)
+
+
+def test_split_refuses_dev_window(data_root, monkeypatch):
+    from f522kit import contract
+    # Pretend the fixture's dates are the dev window: the default val window must be refused.
+    monkeypatch.setitem(contract.DEFAULT_WINDOWS, "dev",
+                        (datetime.date(2023, 2, 1), datetime.date(2023, 12, 31)))
+    with pytest.raises(ValueError, match="dev window"):
+        xsplit.choose_anchor(Dataset(data_root))

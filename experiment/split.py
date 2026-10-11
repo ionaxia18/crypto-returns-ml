@@ -40,6 +40,9 @@ meta.json is written last; a crashed build has none and will not open.
 Usage::
 
     python -m experiment.split --data $DATA_ROOT --out $SCRATCH/core980-work/experiment/v2_52w
+    # a second window, for confirmation (never inside the dev window):
+    python -m experiment.split --data $DATA_ROOT --out $SCRATCH/core980-work/experiment/v3_52w_jan24 \\
+        --val-after 2024-01-01
 """
 
 from __future__ import annotations
@@ -55,6 +58,7 @@ from pathlib import Path
 
 import numpy as np
 
+from f522kit import contract
 from f522kit.calendar import Anchor
 from f522kit.data import Dataset
 from f522kit.driver import KIT_VERSION, resolve_schedule
@@ -70,21 +74,34 @@ MINUTE_STRIDE = 5
 WRITE_CHUNK_ROWS = 32_768  # bounds per-worker RAM (~128 MB of X at K=980)
 
 
-def choose_anchor(dataset: Dataset) -> tuple[Anchor, list[datetime.date], dict]:
-    """The 4w anchor whose scored dates start on/after VAL_AFTER.
+def choose_anchor(
+    dataset: Dataset, val_after: datetime.date | None = None
+) -> tuple[Anchor, list[datetime.date], dict]:
+    """The 4w anchor whose scored dates start on/after ``val_after``
+    (default ``VAL_AFTER``). A second split on another window is how results
+    chosen on the default window get confirmed on data they were not picked on.
 
     Returns the anchor, the dates it scores (= val), and the weekly groups.
+    Refuses any val window that overlaps the contract's dev window, which
+    stays untouched for final confirmation.
     """
+    val_after = val_after or VAL_AFTER
     schedule = resolve_schedule(dataset, "4w")
     by_anchor: dict[datetime.date, list[datetime.date]] = {}
     for date, anchor in schedule.assignment.items():
         by_anchor.setdefault(anchor.key, []).append(date)
-    candidates = sorted(k for k, ds in by_anchor.items() if min(ds) >= VAL_AFTER)
+    candidates = sorted(k for k, ds in by_anchor.items() if min(ds) >= val_after)
     if not candidates:
-        raise ValueError(f"no 4w anchor scores dates on/after {VAL_AFTER}")
+        raise ValueError(f"no 4w anchor scores dates on/after {val_after}")
     key = candidates[0]
     anchor = next(a for a in schedule.anchors if a.key == key)
-    return anchor, sorted(by_anchor[key]), schedule.groups
+    val_dates = sorted(by_anchor[key])
+    dev_start, dev_end = contract.DEFAULT_WINDOWS["dev"]
+    if val_dates[-1] >= dev_start and val_dates[0] <= dev_end:
+        raise ValueError(
+            f"val window {val_dates[0]}..{val_dates[-1]} overlaps the dev window "
+            f"{dev_start}..{dev_end}, which stays untouched; pick an earlier --val-after")
+    return anchor, val_dates, schedule.groups
 
 
 def train_dates_for(anchor: Anchor, groups: dict, train_weeks: int) -> list[datetime.date]:
@@ -183,6 +200,7 @@ def build_split(
     minute_stride: int = MINUTE_STRIDE,
     workers: int = 8,
     force: bool = False,
+    val_after: datetime.date | None = None,
 ) -> dict:
     """Build and write the experiment split; returns its meta dictionary."""
     t0 = time.time()
@@ -196,7 +214,7 @@ def build_split(
     out.mkdir(parents=True, exist_ok=True)
 
     dataset = Dataset(data_root)
-    anchor, val_dates, groups = choose_anchor(dataset)
+    anchor, val_dates, groups = choose_anchor(dataset, val_after)
     train_dates = train_dates_for(anchor, groups, train_weeks)
     print(f"anchor {anchor.key}: train {train_dates[0]}..{train_dates[-1]} "
           f"({len(train_dates)} dates, {train_weeks}w, minute stride {minute_stride}), "
@@ -226,6 +244,7 @@ def build_split(
         "data_root": str(data_root),
         "n_features": dataset.n_features,
         "anchor": anchor.key.isoformat(),
+        "val_after": (val_after or VAL_AFTER).isoformat(),
         "train_weeks": train_weeks,
         "minute_stride": minute_stride,
         "train_dates": [d.isoformat() for d in train_dates],
@@ -277,9 +296,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--workers", type=int,
                    default=int(os.environ.get("SLURM_CPUS_PER_TASK", 8)))
     p.add_argument("--force", action="store_true", help="overwrite a non-empty --out")
+    p.add_argument("--val-after", type=datetime.date.fromisoformat, default=None,
+                   help=f"use the first 4w anchor whose val dates start on/after this "
+                        f"(default {VAL_AFTER}); for confirming results on a second window")
     a = p.parse_args(argv)
     build_split(a.data, a.out, train_weeks=a.train_weeks, minute_stride=a.minute_stride,
-                workers=a.workers, force=a.force)
+                workers=a.workers, force=a.force, val_after=a.val_after)
     return 0
 
 

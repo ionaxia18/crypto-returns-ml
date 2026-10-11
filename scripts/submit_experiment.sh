@@ -15,6 +15,10 @@
 #     for c in 8 16 32; do scripts/submit_experiment.sh LIST -c $c -- --suffix _c$c; done
 # - MAX_PARALLEL=N limits how many array tasks run at once (default: all).
 # - SPLIT (default $SCRATCH/core980-work/experiment/v2_52w) is exported to both jobs.
+# - BUILD_ARGS: options for the split build when one is needed, e.g. a second
+#   validation window:
+#     SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 BUILD_ARGS="--val-after 2024-01-01" \
+#         scripts/submit_experiment.sh experiments/confirm_v1.txt
 #   Results go to results/<split dir name>/ (e.g. results/v2_52w/).
 # - Several lists can be submitted back to back before the split exists: the
 #   pending build job id is kept in $SPLIT.build_job and later submissions
@@ -57,7 +61,8 @@ elif [[ -e "$SPLIT" ]]; then
   echo "Check logs/experiment_build-*.out; remove $SPLIT and $MARKER to rebuild." >&2
   exit 1
 else
-  BUILD_ID=$(sbatch --parsable scripts/experiment_build.sbatch)
+  # shellcheck disable=SC2086  # BUILD_ARGS is a list of options on purpose
+  BUILD_ID=$(sbatch --parsable scripts/experiment_build.sbatch ${BUILD_ARGS:-})
   mkdir -p "$(dirname "$SPLIT")" && echo "$BUILD_ID" > "$MARKER"
   echo "no split at $SPLIT: submitted build job $BUILD_ID"
   DEPEND=(--dependency="afterok:$BUILD_ID")

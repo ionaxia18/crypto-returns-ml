@@ -1,0 +1,39 @@
+# Confirmation on a SECOND validation window: do the window-1 conclusions hold
+# on 28 days none of these settings were chosen on?
+# Window 1 (v2_52w): val 2024-04-09..05-06. Window 2: --val-after 2024-01-01
+# -> val 2024-01-16..02-12, train 2023-01-16..2024-01-14 (52w, stride 5).
+# Window-1 claims under test:
+#   1. ridge lambda ~0.3-1 beats the contract lambda 0.01 (1.95 vs 1.76)
+#   2. a linear MLP with EMA ~ tuned ridge; one hidden layer adds nothing
+#   3. two layers (256x128) beat the best linear model (+0.17)
+#   4. more dropout (0.2) / more depth (4 layers) beat 256x128 (+0.05)
+#
+# Submit (builds the window-2 split first, then runs; results land in
+# results/v3_52w_jan24/):
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 BUILD_ARGS="--val-after 2024-01-01" \
+#       scripts/submit_experiment.sh experiments/confirm_v1.txt
+# Read:
+#   python -m experiment.table --results results/v3_52w_jan24 --by-config --baseline ridge_lam1
+# Linear baselines (deterministic)
+ridge_eqall   ridge  {"es_days": 14}            # contract lambda 0.01
+ridge_lam0.3  ridge  {"es_days": 14, "lam": 0.3}
+ridge_lam1    ridge  {"es_days": 14, "lam": 1.0}   # best linear on window 1
+# Linear MLP, round-2 winner (EMA)
+lin_ema_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [], "seed": 0}
+lin_ema_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [], "seed": 1}
+lin_ema_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [], "seed": 2}
+# One hidden layer: was 1.94, no better than tuned ridge
+h64_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 0}
+h64_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 1}
+h64_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [64], "seed": 2}
+# Two layers: window-1 winner, 2.13 (+0.17 vs ridge lambda 1)
+h256x128_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 0}
+h256x128_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 1}
+h256x128_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "seed": 2}
+# Deep-batch finalists (window 1): dropout 0.2 -> 2.18, 4 layers -> 2.18
+h256x128_do0.2_s0  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+h256x128_do0.2_s1  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+h256x128_do0.2_s2  mlp  {"hidden": [256, 128], "dropout": 0.2, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
+h256x128x64x32_s0  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.1, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 0}
+h256x128x64x32_s1  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.1, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 1}
+h256x128x64x32_s2  mlp  {"hidden": [256, 128, 64, 32], "dropout": 0.1, "lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "seed": 2}
