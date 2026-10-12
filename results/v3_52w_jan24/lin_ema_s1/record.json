@@ -1,0 +1,233 @@
+{
+  "name": "lin_ema_s1",
+  "model": "mlp",
+  "spec": "/scratch/users/ionaxia/core980-work/crypto-returns-ml/models/mlp.py:MyModel",
+  "config": {
+    "threads": 17,
+    "lr": 3e-05,
+    "lr_schedule": "constant",
+    "weight_avg": "ema",
+    "es_metric": "loss",
+    "clip_sigma": 1000000.0,
+    "batch_size": 4096,
+    "weight_decay": 0.0,
+    "max_epochs": 30,
+    "patience": 5,
+    "in_ram": true,
+    "hidden": [],
+    "seed": 1
+  },
+  "split": "/scratch/users/ionaxia/core980-work/experiment/v3_52w_jan24",
+  "split_meta": {
+    "split_version": 2,
+    "anchor": "2024-01-21",
+    "train_weeks": 52,
+    "minute_stride": 5,
+    "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439"
+  },
+  "cpus": 17,
+  "host": "sh03-08n31.int",
+  "platform": "Linux-3.10.0-1160.156.1.el7.tuxcare.els4.x86_64-x86_64-with-glibc2.17",
+  "slurm_job": "47459216",
+  "git": "unknown",
+  "started": "2026-10-11T22:43:54",
+  "resolved_config": {
+    "batch_size": 4096,
+    "chunk_rows": 262144,
+    "clip_sigma": 1000000.0,
+    "dropout": 0.1,
+    "ema_decay": 0.9998,
+    "embargo_days": 1,
+    "es_days": 14,
+    "es_frac": 0.1,
+    "es_metric": "loss",
+    "hidden": [],
+    "in_ram": true,
+    "lr": 3e-05,
+    "lr_min_frac": 0.01,
+    "lr_schedule": "constant",
+    "max_epochs": 30,
+    "max_rows": 0,
+    "patience": 5,
+    "seed": 1,
+    "stats_rows": 500000,
+    "threads": 17,
+    "weight_avg": "ema",
+    "weight_decay": 0.0
+  },
+  "fit_info": {
+    "n_fit_rows": 17122165,
+    "fit_rows_sha": "90570c6a2e7f",
+    "n_holdout_rows": 904185,
+    "best_epoch": 8,
+    "es_metric": "loss",
+    "holdout_aps_bps": 1.0555291154091495,
+    "holdout_loss": 1.9865696334162999,
+    "history": [
+      {
+        "epoch": 0,
+        "train_loss": 1.0545371992763097,
+        "holdout_aps_bps": 0.1678966404248496,
+        "holdout_loss": 1.9974715939782546,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 1,
+        "train_loss": 1.0235311094417154,
+        "holdout_aps_bps": 0.4336993186544813,
+        "holdout_loss": 1.9932948546725349,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 2,
+        "train_loss": 1.0212554666970146,
+        "holdout_aps_bps": 0.488350467946811,
+        "holdout_loss": 1.9933723171487472,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 3,
+        "train_loss": 1.0201530283329265,
+        "holdout_aps_bps": 0.5785590566229598,
+        "holdout_loss": 1.993946945119289,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 4,
+        "train_loss": 1.0199761348365752,
+        "holdout_aps_bps": 0.654207847649036,
+        "holdout_loss": 1.9911155212818656,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 5,
+        "train_loss": 1.0194209399505747,
+        "holdout_aps_bps": 0.707714063087078,
+        "holdout_loss": 1.991293589424437,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 6,
+        "train_loss": 1.0192792706025022,
+        "holdout_aps_bps": 0.8365689107082157,
+        "holdout_loss": 1.9882494904594867,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 7,
+        "train_loss": 1.0188841277361478,
+        "holdout_aps_bps": 0.9101973905430076,
+        "holdout_loss": 1.9890660700751055,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 8,
+        "train_loss": 1.018946733846811,
+        "holdout_aps_bps": 1.0555291154091495,
+        "holdout_loss": 1.9865696334162999,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 9,
+        "train_loss": 1.0186407743375294,
+        "holdout_aps_bps": 0.9446506788547768,
+        "holdout_loss": 1.989052761072,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 10,
+        "train_loss": 1.018513263858595,
+        "holdout_aps_bps": 0.9476093692163956,
+        "holdout_loss": 1.9905001761421375,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 11,
+        "train_loss": 1.0185762456195429,
+        "holdout_aps_bps": 0.8993725084411917,
+        "holdout_loss": 1.9925345085749728,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 12,
+        "train_loss": 1.018475898806855,
+        "holdout_aps_bps": 0.938347559329446,
+        "holdout_loss": 1.992363204890513,
+        "lr": 3e-05
+      },
+      {
+        "epoch": 13,
+        "train_loss": 1.0185239230912058,
+        "holdout_aps_bps": 0.9966232551523634,
+        "holdout_loss": 1.99025697300809,
+        "lr": 3e-05
+      }
+    ],
+    "y_scale": 0.004173363191272983
+  },
+  "report": {
+    "windows": {
+      "val": {
+        "n_dates": 28,
+        "start_date": "2024-01-16",
+        "end_date": "2024-02-12",
+        "APS_mean_bps": 1.6543631539706862,
+        "COR_mean": 0.0411659824273841,
+        "AR_mean": 0.5779202209126343,
+        "APS_SR": 43.056815349833904,
+        "AS_mean": 0.00028559237537294175,
+        "RS_mean": 0.004031481803256622
+      }
+    },
+    "guardrails": {
+      "val": {
+        "n_dates": 28,
+        "clip_rate": 0.0,
+        "pred_rms_weighted_rows": 0.0003271437076390635
+      }
+    },
+    "daily_APS_bps": [
+      1.424498137735256,
+      1.5722213006011057,
+      2.7498104420474117,
+      2.563658125697546,
+      0.567798979264046,
+      1.8143920035421304,
+      2.534903044471056,
+      2.402321566827099,
+      1.480014546724836,
+      0.8632744414485252,
+      1.5106247946478333,
+      2.7413683617820643,
+      2.0244372834348776,
+      1.6170319135333002,
+      0.9160470700443133,
+      0.5303282920508914,
+      0.22013000604607913,
+      1.6877036973668604,
+      0.40232930289503277,
+      1.6936528317113029,
+      1.2559141157422402,
+      3.0122087108898095,
+      1.7856805027449465,
+      1.400576892234219,
+      2.2151297870140336,
+      1.607527720309286,
+      1.8676304152422991,
+      1.8609540251308205
+    ]
+  },
+  "baseline": null,
+  "x_in_ram": false,
+  "timing_s": {
+    "load": 0.27,
+    "fit": 1041.81,
+    "predict": 64.18,
+    "total": 1109.35
+  },
+  "peak_rss_gb": {
+    "after_fit": 143.23,
+    "final": 143.23
+  },
+  "finished": "2026-10-11T23:02:24"
+}
