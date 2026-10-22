@@ -357,3 +357,74 @@ def test_split_refuses_dev_window(data_root, monkeypatch):
                         (datetime.date(2023, 2, 1), datetime.date(2023, 12, 31)))
     with pytest.raises(ValueError, match="dev window"):
         xsplit.choose_anchor(Dataset(data_root))
+
+
+# -- rolling evaluation (official kit path, one job per anchor) --------------------
+
+def test_rolling_parts_merge_equal_a_single_kit_run(data_root, tmp_path):
+    from experiment import rolling
+    ds = Dataset(data_root)
+    plan = rolling.anchor_plan(ds)
+    assert len(plan) >= 2
+    spec = f"{REPO}/models/ridge.py:MyModel"
+    for i in range(1, len(plan) + 1):
+        quiet(rolling.run_part, data_root, spec, tmp_path / "rolled", i, row_budget=10_000)
+    merged = quiet(rolling.merge, data_root, tmp_path / "rolled")
+    first, last = plan[0][1], plan[-1][2]
+    quiet(run, ds, spec, tmp_path / "single", stride="4w", row_budget=10_000, seed=0,
+          start=first, end=last, verbose=False)
+    single = json.loads((tmp_path / "single" / "run_manifest.json").read_text())
+    assert set(merged["predictions"]) == set(single["predictions"])
+    for date in single["predictions"]:
+        a = np.load(tmp_path / "rolled" / "preds" / f"{date}.npy")
+        b = np.load(tmp_path / "single" / "preds" / f"{date}.npy")
+        np.testing.assert_array_equal(a, b)
+    window = {"w": (first, last)}
+    assert (score(ds, tmp_path / "rolled", windows=window)["windows"]
+            == score(ds, tmp_path / "single", windows=window)["windows"])
+
+
+def test_rolling_refuses_dev_and_missing_parts(data_root, tmp_path):
+    from experiment import rolling
+    with pytest.raises(ValueError, match="dev window"):
+        rolling.window_bounds(end=datetime.date(2024, 8, 1))
+    quiet(rolling.run_part, data_root, f"{REPO}/models/ridge.py:MyModel", tmp_path / "r", 1,
+          row_budget=10_000)
+    with pytest.raises(SystemExit, match="missing part"):
+        quiet(rolling.merge, data_root, tmp_path / "r")
+
+
+def test_mlp_final_candidates_run_through_the_kit(data_root, tmp_path):
+    from experiment import rolling
+    for cls in ("Linear", "TwoLayer"):
+        quiet(rolling.run_part, data_root, f"{REPO}/models/mlp_final.py:{cls}",
+              tmp_path / cls, 2, row_budget=3_000)
+        man = json.loads(next((tmp_path / cls / "parts").glob("*/run_manifest.json")).read_text())
+        assert man["predictions"] and man["model_spec"].endswith(cls)
+
+
+# -- LightGBM options -----------------------------------------------------------------
+
+LGB_SMALL = {"num_boost_round": 60, "early_stopping_rounds": 10, "es_days": 5,
+             "min_data_in_leaf": 20, "num_leaves": 7, "threads": 1}
+
+
+@pytest.mark.parametrize("opts", [{"es_metric": "loss"}, {"base": "ridge"},
+                                  {"base": "ridge", "es_metric": "loss", "max_depth": 1,
+                                   "num_leaves": 2}])
+def test_lgbm_options_train_and_find_signal(split3, tmp_path, opts):
+    rec = quiet(xrun.run_one, split3.root, "lgbm", {**LGB_SMALL, **opts}, "g", tmp_path)
+    assert rec["report"]["windows"]["val"]["COR_mean"] > 0.2
+    assert rec["fit_info"]["base"] == opts.get("base", "none")
+
+
+def test_lgbm_ridge_base_starts_from_ridge(split3, tmp_path):
+    """With (almost) no boosting, ridge-base LightGBM predicts what ridge predicts."""
+    cfg = {**LGB_SMALL, "base": "ridge", "num_boost_round": 1, "learning_rate": 1e-9}
+    g = quiet(xrun.run_one, split3.root, "lgbm", cfg, "g", tmp_path)
+    r = quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "r", tmp_path)
+    assert g["fit_info"]["fit_rows_sha"] == r["fit_info"]["fit_rows_sha"]
+    for date in split3.val_dates:
+        a = np.load(tmp_path / "g" / "preds" / f"{date.isoformat()}.npy")
+        b = np.load(tmp_path / "r" / "preds" / f"{date.isoformat()}.npy")
+        np.testing.assert_allclose(a, b, rtol=1e-4, atol=1e-7)

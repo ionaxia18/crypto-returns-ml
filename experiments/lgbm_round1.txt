@@ -1,0 +1,50 @@
+# LightGBM round 1 under the standard setup: identical rows (all fit rows,
+# last 15 days held out for early stopping), 3 seeds, compared with the
+# contract ridge on the same rows (ridge_eqall). Run on BOTH windows: a change
+# counts only if it holds on both (window 1 misled us on close MLP variants).
+# Earlier, single seed, window 1 only: all rows 1.70 vs ridge 1.76; learning
+# rate 0.02 (6M rows) 1.74; it always stopped after < 150 trees.
+#
+# 10 configs x 3 seeds = 30 runs per window. Up to 10000 trees, stop after 200
+# rounds without improvement (low learning rates and depth-1 trees need many).
+#
+# Submit to both windows (all rows need the 128G default):
+#   scripts/submit_experiment.sh experiments/lgbm_round1.txt
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 scripts/submit_experiment.sh experiments/lgbm_round1.txt
+# Read, per window:
+#   python -m experiment.table --results results/v2_52w       --by-config --baseline ridge_eqall
+#   python -m experiment.table --results results/v3_52w_jan24 --by-config --baseline ridge_eqall
+# --- Reference: current defaults (learning rate 0.05, 63 leaves, stop on APS) ---
+lgb_default_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "seed": 0}
+lgb_default_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "seed": 1}
+lgb_default_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "seed": 2}
+# --- Fix training first (63 leaves) ---
+lgb_lr02_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "seed": 0}
+lgb_lr02_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "seed": 1}
+lgb_lr02_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "seed": 2}
+lgb_lr02_loss_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "seed": 0}
+lgb_lr02_loss_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "seed": 1}
+lgb_lr02_loss_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "seed": 2}
+lgb_lr01_loss_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.01, "es_metric": "loss", "seed": 0}
+lgb_lr01_loss_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.01, "es_metric": "loss", "seed": 1}
+lgb_lr01_loss_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.01, "es_metric": "loss", "seed": 2}
+# --- Tree-complexity ladder (learning rate 0.02, stop on loss): where does flexibility start to help? ---
+lgb_depth1_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 1, "num_leaves": 2, "seed": 0}
+lgb_depth1_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 1, "num_leaves": 2, "seed": 1}
+lgb_depth1_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 1, "num_leaves": 2, "seed": 2}
+lgb_depth2_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 2, "num_leaves": 4, "seed": 0}
+lgb_depth2_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 2, "num_leaves": 4, "seed": 1}
+lgb_depth2_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 2, "num_leaves": 4, "seed": 2}
+lgb_depth3_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 3, "num_leaves": 8, "seed": 0}
+lgb_depth3_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 3, "num_leaves": 8, "seed": 1}
+lgb_depth3_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "max_depth": 3, "num_leaves": 8, "seed": 2}
+lgb_leaves15_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "seed": 0}
+lgb_leaves15_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "seed": 1}
+lgb_leaves15_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "seed": 2}
+# --- Trees on top of ridge: start from ridge (lambda 0.01) and learn only the corrections ---
+lgb_ridge_depth2_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "max_depth": 2, "num_leaves": 4, "seed": 0}
+lgb_ridge_depth2_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "max_depth": 2, "num_leaves": 4, "seed": 1}
+lgb_ridge_depth2_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "max_depth": 2, "num_leaves": 4, "seed": 2}
+lgb_ridge_leaves15_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "num_leaves": 15, "seed": 0}
+lgb_ridge_leaves15_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "num_leaves": 15, "seed": 1}
+lgb_ridge_leaves15_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "base": "ridge", "num_leaves": 15, "seed": 2}
