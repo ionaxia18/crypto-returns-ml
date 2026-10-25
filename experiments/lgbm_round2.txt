@@ -1,0 +1,25 @@
+# LightGBM round 2 (both windows, identical rows, 3 seeds; baseline ridge_eqall).
+# Round 1 winners vs contract ridge, pooled over both windows: learning rate
+# 0.01 + stop on loss (63 leaves) +0.17; 15 leaves (lr 0.02) +0.13; depth 3 +0.10.
+# References already run: lgb_lr01_loss (lr 0.01, 63 leaves), lgb_leaves15.
+# 4 configs x 3 seeds = 12 runs per window. Low learning rates use many trees:
+# round 1's lr 0.01 runs took up to ~2 h, so expect 2-4 h here (default 6 h limit).
+#
+#   scripts/submit_experiment.sh experiments/lgbm_round2.txt
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 scripts/submit_experiment.sh experiments/lgbm_round2.txt
+# --- Combine the two round-1 winners: learning rate 0.01 + stop on loss (+0.17 pooled) with 15 leaves (+0.13) ---
+lgb2_lr01_l15_s0  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "seed": 0}
+lgb2_lr01_l15_s1  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "seed": 1}
+lgb2_lr01_l15_s2  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "seed": 2}
+# --- Slower still ---
+lgb2_lr005_l15_s0  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 400, "es_metric": "loss", "learning_rate": 0.005, "num_leaves": 15, "seed": 0}
+lgb2_lr005_l15_s1  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 400, "es_metric": "loss", "learning_rate": 0.005, "num_leaves": 15, "seed": 1}
+lgb2_lr005_l15_s2  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 400, "es_metric": "loss", "learning_rate": 0.005, "num_leaves": 15, "seed": 2}
+# --- Depth 3 at the lower learning rate (depth 3 was +0.10 at 0.02) ---
+lgb2_lr01_depth3_s0  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "max_depth": 3, "num_leaves": 8, "seed": 0}
+lgb2_lr01_depth3_s1  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "max_depth": 3, "num_leaves": 8, "seed": 1}
+lgb2_lr01_depth3_s2  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "max_depth": 3, "num_leaves": 8, "seed": 2}
+# --- More regularization per leaf (min_data_in_leaf 2000 -> 5000) ---
+lgb2_lr01_l15_md5k_s0  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "min_data_in_leaf": 5000, "seed": 0}
+lgb2_lr01_l15_md5k_s1  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "min_data_in_leaf": 5000, "seed": 1}
+lgb2_lr01_l15_md5k_s2  lgbm  {"max_rows": 0, "num_boost_round": 20000, "early_stopping_rounds": 200, "es_metric": "loss", "learning_rate": 0.01, "num_leaves": 15, "min_data_in_leaf": 5000, "seed": 2}

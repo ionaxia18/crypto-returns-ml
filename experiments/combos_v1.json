@@ -1,0 +1,137 @@
+{
+  "_about": "Combined models from saved predictions (experiment/combine.py). Components average all matching seeds. Baseline for comparison: ridge_eqall (contract ridge, same rows). Weights are NOT tuned on val: all variants are reported.",
+  "components": {
+    "v2_52w": {
+      "ridge": [
+        "ridge_eqall"
+      ],
+      "lgb": [
+        "lgb_lr01_loss_s*"
+      ],
+      "lgb15": [
+        "lgb_leaves15_s*"
+      ],
+      "mlp2": [
+        "ladder_h256x128_s*"
+      ],
+      "mlplin": [
+        "lin2_lr3e-5_con_ema_loss_s*"
+      ]
+    },
+    "v3_52w_jan24": {
+      "ridge": [
+        "ridge_eqall"
+      ],
+      "lgb": [
+        "lgb_lr01_loss_s*"
+      ],
+      "lgb15": [
+        "lgb_leaves15_s*"
+      ],
+      "mlp2": [
+        "h256x128_s*"
+      ],
+      "mlplin": [
+        "lin_ema_s*"
+      ]
+    }
+  },
+  "combos": [
+    {
+      "name": "cmb_seedavg_lgb",
+      "parts": {
+        "lgb": 1
+      },
+      "norm": "none"
+    },
+    {
+      "name": "cmb_seedavg_mlp2",
+      "parts": {
+        "mlp2": 1
+      },
+      "norm": "none"
+    },
+    {
+      "name": "cmb_ridge_lgb_raw",
+      "parts": {
+        "ridge": 1,
+        "lgb": 1
+      },
+      "norm": "none"
+    },
+    {
+      "name": "cmb_ridge_lgb",
+      "parts": {
+        "ridge": 1,
+        "lgb": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb_25_75",
+      "parts": {
+        "ridge": 1,
+        "lgb": 3
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb_75_25",
+      "parts": {
+        "ridge": 3,
+        "lgb": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_mlp2",
+      "parts": {
+        "ridge": 1,
+        "mlp2": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_lgb_mlp2",
+      "parts": {
+        "lgb": 1,
+        "mlp2": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_lgb_lgb15",
+      "parts": {
+        "lgb": 1,
+        "lgb15": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb_mlp2",
+      "parts": {
+        "ridge": 1,
+        "lgb": 1,
+        "mlp2": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb_mlp2_raw",
+      "parts": {
+        "ridge": 1,
+        "lgb": 1,
+        "mlp2": 1
+      },
+      "norm": "none"
+    },
+    {
+      "name": "cmb_mlplin_lgb",
+      "parts": {
+        "mlplin": 1,
+        "lgb": 1
+      },
+      "norm": "rms"
+    }
+  ]
+}

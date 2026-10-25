@@ -101,7 +101,7 @@ def build_table(split_dir, results, baseline=None, extra=(), data_root=None):
 # in_ram only changes how the MLP's rows are fed (loaded once vs streamed).
 NON_CONFIG_KEYS = {"seed", "threads", "in_ram"}
 # Models with no randomness: extra seeds cannot change them, so no seed warning.
-DETERMINISTIC_MODELS = {"ridge"}
+DETERMINISTIC_MODELS = {"ridge", "combo"}
 
 
 def _canon(cfg: dict) -> str:
@@ -116,6 +116,8 @@ def _resolve_now(rec: dict) -> dict:
     (LightGBM max_rows 2M -> 0) was backfilled into the older records."""
     from .run import MODELS, load_class, resolved_config  # deferred: heavy imports
     spec = MODELS.get(rec["model"], rec.get("spec", rec["model"]))
+    if ":" not in spec:  # not a model class, e.g. an experiment/combine.py combination
+        return {}
     return resolved_config(load_class(spec)(**rec.get("config", {})))
 
 

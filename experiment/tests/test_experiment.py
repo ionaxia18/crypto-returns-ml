@@ -428,3 +428,49 @@ def test_lgbm_ridge_base_starts_from_ridge(split3, tmp_path):
         a = np.load(tmp_path / "g" / "preds" / f"{date.isoformat()}.npy")
         b = np.load(tmp_path / "r" / "preds" / f"{date.isoformat()}.npy")
         np.testing.assert_allclose(a, b, rtol=1e-4, atol=1e-7)
+
+
+# -- combined models from saved predictions -----------------------------------------
+
+def test_combinations_from_saved_predictions(split3, tmp_path):
+    from experiment import combine
+    res = tmp_path / "res"
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "ridge_es", res)
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5, "lam": 10.0}, "ridge_l10", res)
+    mlp = {"es_days": 5, "hidden": [8], "max_epochs": 2, "threads": 1}
+    for s in (0, 1):
+        quiet(xrun.run_one, split3.root, "mlp", {**mlp, "seed": s}, f"mlp_s{s}", res)
+    window = split3.root.resolve().name
+    spec = {"components": {window: {"r": ["ridge_es"], "r10": ["ridge_l10"], "m": ["mlp_s*"],
+                                    "gone": ["no_such_run*"]}},
+            "combos": [{"name": "c_r", "parts": {"r": 1}},
+                       {"name": "c_rr_rms", "parts": {"r": 1, "r10": 0}, "norm": "rms"},
+                       {"name": "c_seedavg", "parts": {"m": 1}},
+                       {"name": "c_w", "parts": {"r": 3, "m": 1}},
+                       {"name": "c_rms", "parts": {"r": 1, "m": 1}, "norm": "rms"},
+                       {"name": "c_missing", "parts": {"r": 1, "gone": 1}}]}
+    (tmp_path / "spec.json").write_text(json.dumps(spec))
+    made = {m["name"]: m for m in quiet(combine.build, split3.root, tmp_path / "spec.json",
+                                        results=res)}
+    assert "c_missing" not in made and not (res / "c_missing").exists()
+    flat = lambda n: combine.gather(split3, res / n)  # noqa: E731
+    # one component, no scaling: identical to the run itself
+    np.testing.assert_allclose(flat("c_r"), flat("ridge_es"), rtol=1e-6)
+    assert made["c_r"]["report"]["windows"] == json.loads(
+        (res / "ridge_es" / "record.json").read_text())["report"]["windows"]
+    # seed average and weighted raw average are what they say
+    np.testing.assert_allclose(flat("c_seedavg"), (flat("mlp_s0") + flat("mlp_s1")) / 2,
+                               rtol=1e-5, atol=1e-9)
+    np.testing.assert_allclose(flat("c_w"), 0.75 * flat("ridge_es") + 0.25 * flat("c_seedavg"),
+                               rtol=1e-5, atol=1e-9)
+    # rms: equal-size contributions; a zero-weight part changes nothing
+    np.testing.assert_allclose(flat("c_rr_rms"), flat("ridge_es"), rtol=1e-5)
+    r, m = flat("ridge_es"), flat("c_seedavg")
+    rr, rm = np.sqrt(np.mean(r ** 2)), np.sqrt(np.mean(m ** 2))
+    np.testing.assert_allclose(flat("c_rms"), (r / rr + m / rm) / 2 * (rr + rm) / 2,
+                               rtol=1e-4, atol=1e-9)
+    # existing combinations are skipped unless forced; the table reads them
+    assert quiet(combine.build, split3.root, tmp_path / "spec.json", results=res) == []
+    rows, _ = xtable.build_config_table(res, baseline="ridge_es")
+    names = {r_["runs"] for r_ in rows}
+    assert {"c_r", "c_seedavg", "c_w", "c_rms"} <= names
