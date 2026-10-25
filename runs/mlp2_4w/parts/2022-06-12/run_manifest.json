@@ -1,0 +1,40 @@
+{
+  "anchors": {
+    "2022-06-12": {
+      "fit_seconds": 8513.673,
+      "n_training_dates": 390,
+      "row_budget": 10000000
+    }
+  },
+  "assignment_rule": "date_mature",
+  "calibration_rule": "identity",
+  "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439",
+  "kit_version": "0.2.3rc2",
+  "model_sha256": "6a796220561c9c3d0637d4d9123d1d9c50125f4a1433993232654cda621dd13d",
+  "model_spec": "models/mlp_final.py:TwoLayer",
+  "predictions": {
+    "2022-07-01": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "a1973b3c1afea009f6541a3968b64077f127e9a5cfa6c0c27e8658ba89305e83"
+    },
+    "2022-07-02": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "00a162d6567578bf1fc5d6a518406f3e38d42fcf8828fc3d7913c17e0308d197"
+    },
+    "2022-07-03": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "a65f0e754d89983a95fb9386950085483b1a11729504015fa09c20b3effce191"
+    },
+    "2022-07-04": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "ba67d8d25108bdefe44afd8120a29768a5274fc494fef9a9e565dce33881ba85"
+    }
+  },
+  "row_budget": 10000000,
+  "seed": 0,
+  "stride": "4w"
+}
