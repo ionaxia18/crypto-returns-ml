@@ -210,6 +210,28 @@ Built from saved predictions with `experiment/combine.py` (`experiments/combos_v
 
 ---
 
+### 5.5 Why it works: ridge and LightGBM are good at different things — *High*
+- **Evidence** (post-prediction analysis, `experiment/analyze.py`; both windows agree):
+  - Predictions correlate only 0.54 / 0.57 (W1 / W2).
+  - LightGBM's gain over ridge comes entirely from the largest 10% of moves
+    (|y| top decile: +0.31 / +0.36); ridge is better on the other 90%
+    (-0.16 / -0.11). The combination matches LightGBM on the largest moves and
+    ridge on the rest.
+  - When they disagree on direction (~25% of rows) ridge contributes ~0
+    (-0.04 / +0.01) and LightGBM +0.16 / +0.24; where they agree, the average
+    beats both (2.02 / 2.04 vs ~1.8).
+  - The gain is concentrated: LightGBM beats ridge on 37% / 47% of instruments,
+    and the top 10% of instruments carry 74% / 71% of its gain; on the heaviest
+    decile (~35% of weight) it is slightly worse (-0.07 / -0.02).
+  - LightGBM adds ~nothing on calm days; its gain is on mid/high-volatility days.
+  - Hour of day: no consistent pattern.
+- **Why**: trees capture threshold/interaction effects that show up in large
+  moves; the linear model is the steadier predictor of ordinary moves.
+- **Caveat**: move size uses the realized return, so it explains the gain but is
+  not known at prediction time.
+- **Implication**: per-instrument or regime-dependent weights are a natural
+  next combination to test.
+
 ## 6. Rolling (official) evaluation
 
 ### 6.1 MLP over 731 days: behind the official ridge, but on unequal data — *Medium*
@@ -232,8 +254,8 @@ Built from saved predictions with `experiment/combine.py` (`experiments/combos_v
    rolling LightGBM run, then combining with the official ridge predictions.
 3. Answered on both windows: yes, linear + LightGBM (5.1). Remaining: does adding
    the MLP help reliably, and do per-instrument weights help?
-4. Where do the nonlinear models gain: which instruments, tails vs normal days?
-   (post-prediction analysis, not started)
+4. Answered for LightGBM vs ridge (5.5). Open: can per-instrument weights capture
+   the concentrated gain out of sample?
 5. Do steadier selection targets (R^2, Sharpe of daily APS) pick better models?
 6. Does 104 weeks of training help the nonlinear models more than ridge?
 

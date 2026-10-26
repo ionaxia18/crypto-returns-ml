@@ -90,7 +90,7 @@ def analyze(split_dir, models: dict, data_root=None, results=None):
         preds[name] = np.mean([gather(split, results / r) for r in runs], axis=0)
         used[name] = runs
     names = list(models)
-    ref, other = names[0], names[1] if len(names) > 1 else names[0]
+    ref, others = names[0], names[1:]
     contrib = {n: contributions(preds[n], y, w, d, n_days) for n in names}
 
     # instrument (episode) per row
@@ -115,25 +115,27 @@ def analyze(split_dir, models: dict, data_root=None, results=None):
     w_by = np.bincount(inv, weights=w)
     rank = np.argsort(np.argsort(w_by))  # 0 = lightest
     inst_dec = (rank * 10 // len(uniq))[inv]
-    agree = np.where(np.sign(preds[ref]) == np.sign(preds[other]), "agree", "disagree")
-
     report["groups"] = {
         "abs_y_decile (0 = smallest moves, 9 = largest)": group_table(dec, names, contrib, w, n_days, list(range(10))),
         "day_volatility": group_table(vol_label, names, contrib, w, n_days, ["low", "mid", "high"]),
         "hour_of_day": group_table(minute // 60, names, contrib, w, n_days, list(range(24))),
         "instrument_weight_decile (9 = heaviest)": group_table(inst_dec, names, contrib, w, n_days, list(range(10))),
-        f"sign: {ref} vs {other}": group_table(agree, names, contrib, w, n_days, ["agree", "disagree"]),
     }
+    # direction agreement between the reference and each other model
+    for o in others:
+        agree = np.where(np.sign(preds[ref]) == np.sign(preds[o]), "agree", "disagree")
+        report["groups"][f"sign: {ref} vs {o}"] = group_table(
+            agree, names, contrib, w, n_days, ["agree", "disagree"])
 
-    # concentration of the gain (other - ref) across instruments
-    if other != ref:
-        g = np.bincount(inv, weights=(contrib[other] - contrib[ref])) / n_days
+    # concentration of each model's gain over the reference across instruments
+    report["instrument_gain"] = {}
+    for o in others:
+        g = np.bincount(inv, weights=(contrib[o] - contrib[ref])) / n_days
         order = np.argsort(-g)
-        total = float(g.sum())
         pos = g[g > 0].sum()
-        report["instrument_gain"] = {
+        report["instrument_gain"][o] = {
             "n_instruments": int(len(uniq)),
-            "total_gain_bps": total,
+            "total_gain_bps": float(g.sum()),
             "share_of_instruments_with_gain": float((g > 0).mean()),
             "top10_gain_bps": float(g[order[:10]].sum()),
             "top10pct_instruments_share_of_positive_gain": float(
@@ -144,28 +146,28 @@ def analyze(split_dir, models: dict, data_root=None, results=None):
 
 
 def to_markdown(rep, names) -> str:
-    ref, other = names[0], names[1] if len(names) > 1 else names[0]
+    ref, others = names[0], names[1:]
     L = [f"# Post-prediction analysis: anchor {rep['split']}, val {rep['val'][0]}..{rep['val'][1]}", "",
          "APS (bps): " + " · ".join(f"{n} {v:.3f}" for n, v in rep["aps_bps"].items()), "",
          "Prediction correlation (weighted): " + " · ".join(f"{k} {v:.2f}"
                                                             for k, v in rep["prediction_correlation"].items()), ""]
     for title, rows in rep["groups"].items():
         L += [f"## {title}", "", "| group | rows | weight | " + " | ".join(names) +
-              (f" | {other} − {ref} |" if other != ref else " |"),
-              "|---|---:|---:|" + "---:|" * len(names) + ("---:|" if other != ref else "")]
+              "".join(f" | {o} − {ref}" for o in others) + " |",
+              "|---|---:|---:|" + "---:|" * (len(names) + len(others))]
         for r in rows:
             L.append(f"| {r['group']} | {r['row_share']:.1%} | {r['weight_share']:.1%} | " +
                      " | ".join(f"{r[n]:+.3f}" for n in names) +
-                     (f" | {r[other] - r[ref]:+.3f} |" if other != ref else " |"))
+                     "".join(f" | {r[o] - r[ref]:+.3f}" for o in others) + " |")
         L.append("")
-    if "instrument_gain" in rep:
-        g = rep["instrument_gain"]
-        L += [f"## Gain of {other} over {ref} across instruments", "",
+    for o, g in rep.get("instrument_gain", {}).items():
+        share = g["top10pct_instruments_share_of_positive_gain"]
+        L += [f"## Gain of {o} over {ref} across instruments", "",
               f"- {g['n_instruments']} instruments; total gain {g['total_gain_bps']:+.3f} bps/day",
-              f"- instruments where {other} gains: {g['share_of_instruments_with_gain']:.0%}",
+              f"- instruments where {o} gains: {g['share_of_instruments_with_gain']:.0%}",
               f"- top 10 instruments: {g['top10_gain_bps']:+.3f}; worst 10: {g['worst10_gain_bps']:+.3f}",
-              f"- top 10% of instruments carry {g['top10pct_instruments_share_of_positive_gain']:.0%} "
-              "of the positive gain" if g["top10pct_instruments_share_of_positive_gain"] is not None else "", ""]
+              f"- top 10% of instruments carry {share:.0%} of the positive gain" if share is not None else "",
+              ""]
     L.append("Contributions are in bps per day; each grouping's rows sum to the model's APS.")
     return "\n".join(L) + "\n"
 

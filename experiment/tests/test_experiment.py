@@ -532,7 +532,22 @@ def test_analysis_decomposition_is_exact(split3, tmp_path):
         for rows in rep["groups"].values():
             np.testing.assert_allclose(sum(r[n] for r in rows), rep["aps_bps"][n], rtol=1e-6)
     assert -1 <= rep["prediction_correlation"]["r~r10"] <= 1
-    np.testing.assert_allclose(rep["instrument_gain"]["total_gain_bps"],
+    np.testing.assert_allclose(rep["instrument_gain"]["r10"]["total_gain_bps"],
                                rep["aps_bps"]["r10"] - rep["aps_bps"]["r"], rtol=1e-6, atol=1e-9)
     md = analyze.to_markdown(rep, ["r", "r10"])
     assert "abs_y_decile" in md and "Gain of r10 over r" in md
+
+
+def test_analysis_compares_every_model_with_the_reference(split3, tmp_path):
+    from experiment import analyze
+    res = tmp_path / "res"
+    for name, lam in (("r", 0.01), ("r1", 1.0), ("r10", 10.0)):
+        quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5, "lam": lam}, name, res)
+    rep = quiet(analyze.analyze, split3.root, {"r": "r", "r1": "r1", "r10": "r10"}, results=res)
+    assert set(rep["instrument_gain"]) == {"r1", "r10"}
+    assert {"sign: r vs r1", "sign: r vs r10"} <= set(rep["groups"])
+    for o in ("r1", "r10"):
+        np.testing.assert_allclose(rep["instrument_gain"][o]["total_gain_bps"],
+                                   rep["aps_bps"][o] - rep["aps_bps"]["r"], rtol=1e-6, atol=1e-9)
+    md = analyze.to_markdown(rep, ["r", "r1", "r10"])
+    assert "r1 − r" in md and "r10 − r" in md and "Gain of r10 over r" in md
