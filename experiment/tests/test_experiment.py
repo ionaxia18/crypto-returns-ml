@@ -516,3 +516,23 @@ def test_combine_rolling_runs(data_root, tmp_path):
     with pytest.raises(SystemExit, match="lacks"):
         quiet(combine_rolling.combine_runs, data_root, {"a": (tmp_path / "a", 1),
               "b": (tmp_path / "b", 1)}, tmp_path / "x", baseline=None)
+
+
+def test_analysis_decomposition_is_exact(split3, tmp_path):
+    from experiment import analyze
+    res = tmp_path / "res"
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "r", res)
+    quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5, "lam": 10.0}, "r10", res)
+    rep = quiet(analyze.analyze, split3.root, {"r": "r", "r10": "r10"}, results=res)
+    # per-row contributions reproduce the kit's mean daily APS (no clipping at these scales)
+    for n in ("r", "r10"):
+        kit = json.loads((res / n / "record.json").read_text())["report"]["windows"]["val"]
+        np.testing.assert_allclose(rep["aps_bps"][n], kit["APS_mean_bps"], rtol=1e-6)
+        # every grouping's contributions add up to the total
+        for rows in rep["groups"].values():
+            np.testing.assert_allclose(sum(r[n] for r in rows), rep["aps_bps"][n], rtol=1e-6)
+    assert -1 <= rep["prediction_correlation"]["r~r10"] <= 1
+    np.testing.assert_allclose(rep["instrument_gain"]["total_gain_bps"],
+                               rep["aps_bps"]["r10"] - rep["aps_bps"]["r"], rtol=1e-6, atol=1e-9)
+    md = analyze.to_markdown(rep, ["r", "r10"])
+    assert "abs_y_decile" in md and "Gain of r10 over r" in md
