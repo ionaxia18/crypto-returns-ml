@@ -1,0 +1,40 @@
+{
+  "anchors": {
+    "2022-06-12": {
+      "fit_seconds": 7285.342,
+      "n_training_dates": 390,
+      "row_budget": 10000000
+    }
+  },
+  "assignment_rule": "date_mature",
+  "calibration_rule": "identity",
+  "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439",
+  "kit_version": "0.2.3rc2",
+  "model_sha256": "2bfcfcfd874aef378ce730e164609f03a8517935eb1a299349070f6a7ba638f4",
+  "model_spec": "models/lgbm_final.py:Best",
+  "predictions": {
+    "2022-07-01": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "572b4ed26d67f3252cf78a8211b1b760690f614768b41bcca12da48fcaf92ceb"
+    },
+    "2022-07-02": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "55dd3e4a0e6e2e5e2497ef16cbc4c934100a187cb8a96e693c14aa925cfcf3b9"
+    },
+    "2022-07-03": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "c8fe348386c45103643221064c19b4d19f937d761fd2a5015d53d4b729e31435"
+    },
+    "2022-07-04": {
+      "anchor": "2022-06-12",
+      "n_symbols": 133,
+      "sha256": "058befaba3df9d3d09d2ec169c71ba7028e25445f5f76ead7d156a6dad60b951"
+    }
+  },
+  "row_budget": 10000000,
+  "seed": 0,
+  "stride": "4w"
+}
