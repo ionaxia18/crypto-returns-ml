@@ -474,3 +474,45 @@ def test_combinations_from_saved_predictions(split3, tmp_path):
     rows, _ = xtable.build_config_table(res, baseline="ridge_es")
     names = {r_["runs"] for r_ in rows}
     assert {"c_r", "c_seedavg", "c_w", "c_rms"} <= names
+
+
+def test_lgbm_final_runs_through_the_kit(data_root, tmp_path):
+    from experiment import rolling
+    quiet(rolling.run_part, data_root, f"{REPO}/models/lgbm_final.py:Best", tmp_path / "g", 2,
+          row_budget=3_000)
+    man = json.loads(next((tmp_path / "g" / "parts").glob("*/run_manifest.json")).read_text())
+    assert man["predictions"] and man["model_spec"].endswith(":Best")
+
+
+def test_combine_rolling_runs(data_root, tmp_path):
+    from experiment import combine_rolling, rolling
+    ds = Dataset(data_root)
+    n = len(rolling.anchor_plan(ds))
+    for name, model in (("a", "ridge.py:MyModel"), ("b", "mlp_final.py:Linear")):
+        for i in range(1, n + 1):
+            quiet(rolling.run_part, data_root, f"{REPO}/models/{model}", tmp_path / name, i,
+                  row_budget=3_000)
+        quiet(rolling.merge, data_root, tmp_path / name)
+    raw = quiet(combine_rolling.combine_runs, data_root,
+                {"a": (tmp_path / "a", 3), "b": (tmp_path / "b", 1)}, tmp_path / "raw",
+                norm="none", baseline=str(tmp_path / "a"))
+    rms = quiet(combine_rolling.combine_runs, data_root,
+                {"a": (tmp_path / "a", 1), "b": (tmp_path / "b", 1)}, tmp_path / "rms",
+                norm="rms", baseline=None)
+    dates = combine_rolling.predictable_dates(ds, *rolling.window_bounds())
+    la = lambda r, d: np.load(tmp_path / r / "preds" / f"{d.isoformat()}.npy").astype(np.float64)  # noqa: E731
+    for d in dates:
+        np.testing.assert_allclose(la("raw", d), 0.75 * la("a", d) + 0.25 * la("b", d),
+                                   rtol=1e-5, atol=1e-9)
+    ra = np.sqrt(np.mean(np.concatenate([la("a", d).ravel() for d in dates]) ** 2))
+    rb = np.sqrt(np.mean(np.concatenate([la("b", d).ravel() for d in dates]) ** 2))
+    for d in dates:
+        np.testing.assert_allclose(la("rms", d), (la("a", d) / ra + la("b", d) / rb) / 2 * (ra + rb) / 2,
+                                   rtol=1e-4, atol=1e-9)
+    assert raw["windows"]["is"]["n_dates"] == len(dates) and "vs_baseline" in raw
+    assert json.loads((tmp_path / "rms" / "report.json").read_text())["windows"]
+    # a part missing a date is refused
+    (tmp_path / "b" / "preds" / f"{dates[0].isoformat()}.npy").unlink()
+    with pytest.raises(SystemExit, match="lacks"):
+        quiet(combine_rolling.combine_runs, data_root, {"a": (tmp_path / "a", 1),
+              "b": (tmp_path / "b", 1)}, tmp_path / "x", baseline=None)
