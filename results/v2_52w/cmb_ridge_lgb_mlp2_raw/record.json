@@ -1,0 +1,128 @@
+{
+  "name": "cmb_ridge_lgb_mlp2_raw",
+  "model": "combo",
+  "spec": "combo",
+  "config": {
+    "parts": {
+      "ridge": 1,
+      "lgb": 1,
+      "mlp2": 1
+    },
+    "norm": "none",
+    "components": {
+      "ridge": [
+        "ridge_eqall"
+      ],
+      "lgb": [
+        "lgb_lr01_loss_s0",
+        "lgb_lr01_loss_s1",
+        "lgb_lr01_loss_s2"
+      ],
+      "mlp2": [
+        "ladder_h256x128_s0",
+        "ladder_h256x128_s1",
+        "ladder_h256x128_s2"
+      ]
+    }
+  },
+  "resolved_config": {
+    "parts": {
+      "ridge": 1,
+      "lgb": 1,
+      "mlp2": 1
+    },
+    "norm": "none",
+    "components": {
+      "ridge": [
+        "ridge_eqall"
+      ],
+      "lgb": [
+        "lgb_lr01_loss_s0",
+        "lgb_lr01_loss_s1",
+        "lgb_lr01_loss_s2"
+      ],
+      "mlp2": [
+        "ladder_h256x128_s0",
+        "ladder_h256x128_s1",
+        "ladder_h256x128_s2"
+      ]
+    }
+  },
+  "split": "/scratch/users/ionaxia/core980-work/experiment/v2_52w",
+  "split_meta": {
+    "split_version": 2,
+    "anchor": "2024-04-14",
+    "train_weeks": 52,
+    "minute_stride": 5,
+    "dataset_id": "faf0d629f2fb41a78f59a3e1bcb4e439"
+  },
+  "report": {
+    "windows": {
+      "val": {
+        "n_dates": 28,
+        "start_date": "2024-04-09",
+        "end_date": "2024-05-06",
+        "APS_mean_bps": 2.184004918672255,
+        "COR_mean": 0.045600518265163884,
+        "AR_mean": 0.9158100160304355,
+        "APS_SR": 25.290517417260055,
+        "AS_mean": 0.00022746646750197694,
+        "RS_mean": 0.004580588618391494
+      }
+    },
+    "guardrails": {
+      "val": {
+        "n_dates": 28,
+        "clip_rate": 0.0,
+        "pred_rms_weighted_rows": 0.00026743138331323195
+      }
+    },
+    "daily_APS_bps": [
+      0.2490825156648507,
+      1.8235205864979935,
+      1.3925555879769793,
+      9.233644505266799,
+      3.8942932180080496,
+      3.1903674311517083,
+      2.0903949948776672,
+      2.230473225717317,
+      1.411133747652538,
+      2.145795785452063,
+      1.6714002969289647,
+      1.467550635882339,
+      2.945575291349137,
+      2.029239425020893,
+      4.04687714412549,
+      2.058719094636426,
+      0.5885570012983296,
+      1.5385158558348984,
+      2.7649915006376853,
+      1.0555508032170327,
+      0.5594142330666937,
+      1.714175067801866,
+      2.138575761664144,
+      2.50308207104064,
+      1.3602068908976326,
+      1.9341555608784833,
+      2.196760529333191,
+      0.9175289609433173
+    ]
+  },
+  "fit_info": {
+    "component_rms": {
+      "ridge": 0.00034860199265538886,
+      "lgb": 0.00020024647777727307,
+      "mlp2": 0.0003538637528426326
+    }
+  },
+  "timing_s": {
+    "fit": 0.0,
+    "total": 1.39
+  },
+  "peak_rss_gb": {
+    "after_fit": 0.0,
+    "final": 0.0
+  },
+  "cpus": 0,
+  "finished": "2026-10-25T19:48:14"
+}
