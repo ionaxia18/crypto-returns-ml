@@ -114,7 +114,7 @@ class MyModel:
     def __init__(self, max_rows=0, num_boost_round=2000,
                  early_stopping_rounds=100, es_days=14, embargo_days=1,
                  es_frac=0.1, threads=0, seed=0, es_metric="aps", base="none",
-                 base_lam=0.01, **params):
+                 base_lam=0.01, log_every=0, **params):
         self.max_rows = int(max_rows)
         self.num_boost_round = int(num_boost_round)
         self.early_stopping_rounds = int(early_stopping_rounds)
@@ -131,6 +131,7 @@ class MyModel:
         self.es_metric = es_metric
         self.base = base
         self.base_lam = float(base_lam)
+        self.log_every = int(log_every)  # print holdout score every N trees (0 = silent)
         self.params = {**PARAMS, **params}
 
     def fit(self, train):
@@ -183,7 +184,8 @@ class MyModel:
             params, dtrain, num_boost_round=self.num_boost_round,
             valid_sets=[dhold], valid_names=["holdout"],
             feval=aps_eval if self.es_metric == "aps" else None,
-            callbacks=[lgb.early_stopping(self.early_stopping_rounds, verbose=False)],
+            callbacks=[lgb.early_stopping(self.early_stopping_rounds, verbose=False)]
+            + ([lgb.log_evaluation(self.log_every)] if self.log_every else []),
         )
         self.best_iteration = int(self.booster.best_iteration or self.num_boost_round)
         best = self.booster.best_score["holdout"]

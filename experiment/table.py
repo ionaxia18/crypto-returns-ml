@@ -99,7 +99,7 @@ def build_table(split_dir, results, baseline=None, extra=(), data_root=None):
 # Settings that do not define a configuration: runs differing only in these
 # are seeds (or hardware / data-feeding variants) of the same configuration.
 # in_ram only changes how the MLP's rows are fed (loaded once vs streamed).
-NON_CONFIG_KEYS = {"seed", "threads", "in_ram"}
+NON_CONFIG_KEYS = {"seed", "threads", "in_ram", "log_every"}
 # Models with no randomness: extra seeds cannot change them, so no seed warning.
 DETERMINISTIC_MODELS = {"ridge", "combo"}
 

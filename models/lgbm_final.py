@@ -14,9 +14,14 @@ Kit-path specifics (as models/mlp_final.py):
   window; every sampled row is used (max_rows 0). ~10M rows needs ~100 GB at
   peak (the sampler briefly holds two copies), within 128 GB.
 - The sample carries no dates, so the early-stopping holdout is the most recent
-  2% of rows (~ the last 14-15 days).
+  2% of rows (~ the last 14-15 days), with no embargo gap.
+- Trees are capped at 3000 (Best). The experiment runs at learning rate 0.01
+  kept 770-2170 trees; with the kit's random sample and gap-less holdout the
+  holdout loss can keep creeping down, and an uncapped first attempt
+  (20000 trees) timed out after 10 h on 25 of 27 anchors. Progress is logged
+  every 200 trees so a slow anchor is visible in its log.
 
-    scripts/submit_rolling.sh models/lgbm_final.py:Best runs/lgbm_4w --time=10:00:00
+    scripts/submit_rolling.sh models/lgbm_final.py:Best runs/lgbm3k_4w --time=12:00:00
 """
 
 import sys
@@ -27,8 +32,9 @@ from models.lgbm import MyModel as _LGBM  # noqa: E402
 
 
 class Best(_LGBM):
-    """lr 0.01, stop on holdout loss, 63 leaves, all sampled rows, seed 0."""
+    """lr 0.01, stop on holdout loss, 63 leaves, all sampled rows, <= 3000 trees, seed 0."""
 
     def __init__(self):
-        super().__init__(max_rows=0, num_boost_round=20000, early_stopping_rounds=200,
-                         es_frac=0.02, seed=0, learning_rate=0.01, es_metric="loss")
+        super().__init__(max_rows=0, num_boost_round=3000, early_stopping_rounds=200,
+                         es_frac=0.02, seed=0, learning_rate=0.01, es_metric="loss",
+                         log_every=200)
