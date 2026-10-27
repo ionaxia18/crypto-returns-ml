@@ -19,6 +19,14 @@
   exponential moving average of the weights (decay ``ema_decay`` per step,
   warmed up as min(decay, (1+t)/(10+t))) and evaluates/keeps that average
   instead of the last, jittery SGD snapshot.
+- Training target and loss (defaults = the original weighted MSE on y):
+  ``loss="huber"`` uses a weighted Huber loss with threshold ``huber_delta``
+  (in units of rms_w(y)), so the largest, mostly unpredictable moves pull on
+  the fit linearly rather than quadratically; ``y_clip`` > 0 clips the
+  training target at +-``y_clip`` rms_w(y); ``weight_power`` trains with
+  weights w**p (1 = APS weights, 0.5 = sqrt, 0 = unweighted). The holdout
+  ``"loss"`` uses the same loss, clipped target and weights, so early stopping
+  follows the objective being trained; holdout APS always uses the raw y and w.
 
 Run:
     f522kit run --data $DATA_ROOT --model models/mlp.py:MyModel \
@@ -64,13 +72,27 @@ def pooled_aps(pred, y, w):
     return awy / np.sqrt(max(awa, 1e-24)) / np.sqrt(max(float(w.sum()), 1e-24))
 
 
+def train_weights(w, power):
+    """w**power on positive weights; zero-weight rows stay zero (0**0 would be 1)."""
+    return w if power == 1.0 else np.where(w > 0, np.abs(w) ** power, 0.0)
+
+
+def weighted_loss(pred, target, w, loss, delta):
+    """Weighted mean of squared error, or of Huber loss (0.5 d^2 inside +-delta,
+    delta * (|d| - 0.5 delta) outside, as torch.nn.functional.huber_loss)."""
+    d = np.abs(pred - target)
+    per = d ** 2 if loss == "mse" else np.where(d <= delta, 0.5 * d ** 2, delta * (d - 0.5 * delta))
+    return float(np.sum(w * per) / np.sum(w))
+
+
 class MyModel:
     def __init__(self, hidden=(256, 128), dropout=0.1, lr=1e-3, weight_decay=1e-5,
                  batch_size=4096, max_epochs=20, patience=3, es_days=14,
                  embargo_days=1, es_frac=0.1, max_rows=0, chunk_rows=262_144,
                  in_ram=True, clip_sigma=5.0, stats_rows=500_000, threads=0, seed=0,
                  lr_schedule="constant", lr_min_frac=0.01, weight_avg="none",
-                 ema_decay=0.9998, es_metric="aps"):
+                 ema_decay=0.9998, es_metric="aps", loss="mse", huber_delta=1.0,
+                 y_clip=0.0, weight_power=1.0):
         self.hidden = tuple(int(h) for h in hidden)
         self.dropout = float(dropout)
         self.lr = float(lr)
@@ -100,6 +122,12 @@ class MyModel:
         self.weight_avg = weight_avg
         self.ema_decay = float(ema_decay)
         self.es_metric = es_metric
+        if loss not in ("mse", "huber"):
+            raise ValueError(f"loss must be mse|huber, got {loss!r}")
+        self.loss = loss
+        self.huber_delta = float(huber_delta)
+        self.y_clip = float(y_clip)
+        self.weight_power = float(weight_power)
 
     # -- kit path -------------------------------------------------------------
     def fit(self, train):
@@ -137,7 +165,12 @@ class MyModel:
         w = np.asarray(w, dtype=np.float64)
         self.y_scale = float(np.sqrt(np.sum(w[:fit_end] * y[:fit_end] ** 2)
                                      / np.sum(w[:fit_end])))
-        w_scale = float(w[:fit_end].mean())
+        # Training target and weights; holdout APS below still uses raw y, w.
+        y_t = y / self.y_scale
+        if self.y_clip > 0:
+            y_t = np.clip(y_t, -self.y_clip, self.y_clip)
+        w_t = train_weights(w, self.weight_power)
+        w_scale = float(w_t[:fit_end].mean())
 
         fit_idx = np.arange(fit_end)
         if self.max_rows and fit_end > self.max_rows:
@@ -159,10 +192,11 @@ class MyModel:
             Xfit = np.empty((fit_idx.size, k), dtype=np.float32)
             for s in range(0, fit_idx.size, self.chunk_rows):
                 Xfit[s:s + self.chunk_rows] = self._transform(X[fit_idx[s:s + self.chunk_rows]])
-        yt = (y[fit_idx] / self.y_scale).astype(np.float32)
-        wt = (w[fit_idx] / w_scale).astype(np.float32)
+        yt = y_t[fit_idx].astype(np.float32)
+        wt = (w_t[fit_idx] / w_scale).astype(np.float32)
         Xh = torch.from_numpy(self._transform(X[hold_start:]))
         yh, wh = y[hold_start:], w[hold_start:]
+        yh_t, wh_t = y_t[hold_start:], w_t[hold_start:]
 
         net = self._net(k)
         opt = torch.optim.AdamW(net.parameters(), lr=self.lr, weight_decay=self.weight_decay)
@@ -190,7 +224,13 @@ class MyModel:
                     xb = xb_all[b:b + self.batch_size]
                     yb = yb_all[b:b + self.batch_size]
                     wb = wb_all[b:b + self.batch_size]
-                    loss = (wb * (net(xb).squeeze(1) - yb) ** 2).sum() / wb.sum()
+                    out = net(xb).squeeze(1)
+                    if self.loss == "mse":
+                        per = (out - yb) ** 2
+                    else:
+                        per = torch.nn.functional.huber_loss(
+                            out, yb, reduction="none", delta=self.huber_delta)
+                    loss = (wb * per).sum() / wb.sum()
                     if self.lr_schedule == "cosine":
                         frac = min(step / max(total_steps, 1), 1.0)
                         lr_t = self.lr * (self.lr_min_frac + (1.0 - self.lr_min_frac)
@@ -213,7 +253,7 @@ class MyModel:
                         q.copy_(e)
             pred_h = self._forward(eval_net, Xh)
             aps = pooled_aps(pred_h, yh, wh)
-            hold_loss = float(np.sum(wh * (pred_h - yh / self.y_scale) ** 2) / np.sum(wh))
+            hold_loss = weighted_loss(pred_h, yh_t, wh_t, self.loss, self.huber_delta)
             score = aps if self.es_metric == "aps" else -hold_loss
             history.append({"epoch": epoch, "train_loss": loss_sum / n_fit,
                             "holdout_aps_bps": aps * 1e4, "holdout_loss": hold_loss,

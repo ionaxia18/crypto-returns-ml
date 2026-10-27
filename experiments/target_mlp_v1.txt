@@ -1,0 +1,40 @@
+# Target / loss study, MLP (both windows, identical rows, 3 seeds; baseline ridge_eqall).
+# Question: APS is noisy because the largest moves (mostly unpredictable) dominate it.
+# Does training on a less tail-driven objective make the MLP better or more
+# consistent across windows? Every run = the final 2-layer MLP (256x128, EMA,
+# lr 3e-5, stop on holdout loss) with ONE change. Early stopping uses the same
+# loss / clipped target / weights the model trains on (models/mlp.py).
+# Reference already run (MSE, w): W1 ladder_h256x128_s*, W2 h256x128_s*.
+# Units: huber_delta and y_clip are in multiples of rms_w(y).
+# 7 configs x 3 seeds = 21 runs per window, ~35-50 min each.
+#
+#   scripts/submit_experiment.sh experiments/target_mlp_v1.txt
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 scripts/submit_experiment.sh experiments/target_mlp_v1.txt
+# --- Huber loss, delta 1 (residuals beyond 1 rms count linearly) ---
+tgt_mlp_huber1_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 1.0, "seed": 0}
+tgt_mlp_huber1_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 1.0, "seed": 1}
+tgt_mlp_huber1_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 1.0, "seed": 2}
+# --- Huber loss, delta 2 ---
+tgt_mlp_huber2_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 2.0, "seed": 0}
+tgt_mlp_huber2_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 2.0, "seed": 1}
+tgt_mlp_huber2_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 2.0, "seed": 2}
+# --- Huber loss, delta 4 ---
+tgt_mlp_huber4_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 4.0, "seed": 0}
+tgt_mlp_huber4_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 4.0, "seed": 1}
+tgt_mlp_huber4_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "loss": "huber", "huber_delta": 4.0, "seed": 2}
+# --- Clipped training target at +-3 rms ---
+tgt_mlp_yclip3_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 3.0, "seed": 0}
+tgt_mlp_yclip3_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 3.0, "seed": 1}
+tgt_mlp_yclip3_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 3.0, "seed": 2}
+# --- Clipped training target at +-5 rms ---
+tgt_mlp_yclip5_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 5.0, "seed": 0}
+tgt_mlp_yclip5_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 5.0, "seed": 1}
+tgt_mlp_yclip5_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "y_clip": 5.0, "seed": 2}
+# --- Weights sqrt(w) (less emphasis on the heaviest instruments) ---
+tgt_mlp_wpow05_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.5, "seed": 0}
+tgt_mlp_wpow05_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.5, "seed": 1}
+tgt_mlp_wpow05_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.5, "seed": 2}
+# --- Unweighted training ---
+tgt_mlp_wpow0_s0  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.0, "seed": 0}
+tgt_mlp_wpow0_s1  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.0, "seed": 1}
+tgt_mlp_wpow0_s2  mlp  {"lr": 3e-05, "lr_schedule": "constant", "weight_avg": "ema", "es_metric": "loss", "clip_sigma": 1000000.0, "batch_size": 4096, "weight_decay": 0.0, "max_epochs": 30, "patience": 5, "in_ram": true, "hidden": [256, 128], "weight_power": 0.0, "seed": 2}

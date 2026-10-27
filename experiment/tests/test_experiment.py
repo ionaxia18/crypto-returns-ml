@@ -551,3 +551,111 @@ def test_analysis_compares_every_model_with_the_reference(split3, tmp_path):
                                    rep["aps_bps"][o] - rep["aps_bps"]["r"], rtol=1e-6, atol=1e-9)
     md = analyze.to_markdown(rep, ["r", "r1", "r10"])
     assert "r1 − r" in md and "r10 − r" in md and "Gain of r10 over r" in md
+
+
+def test_overall_table_seed_mean_and_pending(tmp_path):
+    from experiment import overall
+
+    def rec(split, name, aps):
+        d = tmp_path / "results" / split / name
+        d.mkdir(parents=True)
+        (d / "record.json").write_text(json.dumps(
+            {"report": {"windows": {"val": {"APS_mean_bps": aps}}}}))
+
+    for s, aps in ((0, 1.0), (1, 2.0)):
+        rec("v2_52w", f"m_s{s}", aps)
+    rec("v3_52w_jan24", "m_s0", 3.0)
+    run = tmp_path / "runs" / "m_4w"
+    run.mkdir(parents=True)
+    is_ = {"APS_mean_bps": 2.5, "APS_SR": 20.0, "COR_mean": 0.05, "AR_mean": 0.6,
+           "n_dates": 731, "start_date": "2022-07-01", "end_date": "2024-06-30"}
+    (run / "report.json").write_text(json.dumps({"windows": {"is": is_}, "vs_baseline": {
+        "is": {"dAPS_mean_bps": -0.1, "diff_sharpe": -2.0, "win_rate": 0.4}}}))
+    models = [("M", {"W1": "m_s*", "W2": "m_s*"}, "runs/m_4w"),
+              ("N", {"W1": "n_s*", "W2": None}, "runs/n_4w")]
+    rows, md = overall.build(tmp_path, models)
+    assert rows[0]["W1 APS"] == "1.50 (2 seeds)" and rows[0]["W2 APS"] == "3.00"
+    assert rows[0]["Sharpe"] == "20.0" and rows[0]["diff Sharpe"] == "-2.0"
+    assert rows[1]["W1 APS"] is None and rows[1]["Rolling APS"] == "pending"
+    assert "731 days" in md
+
+
+# -- training target / loss options (target study) ------------------------------------
+
+TARGET_OPTS = [{"loss": "huber", "huber_delta": 1.0}, {"y_clip": 2.0}, {"weight_power": 0.5},
+               {"weight_power": 0.0}]
+
+
+@pytest.mark.parametrize("opts", TARGET_OPTS)
+def test_mlp_target_options_train_and_stop_on_their_loss(split3, tmp_path, opts):
+    cfg = {"hidden": [8], "lr": 1e-2, "es_days": 5, "batch_size": 64, "max_epochs": 6,
+           "patience": 6, "threads": 1, "es_metric": "loss", **opts}
+    rec = quiet(xrun.run_one, split3.root, "mlp", cfg, "m", tmp_path)
+    fi = rec["fit_info"]
+    assert rec["report"]["windows"]["val"]["COR_mean"] > 0.2
+    assert fi["best_epoch"] == np.argmin([e["holdout_loss"] for e in fi["history"]])
+    assert {k: rec["resolved_config"][k] for k in opts} == opts
+
+
+@pytest.mark.parametrize("opts", TARGET_OPTS)
+def test_lgbm_target_options_train(split3, tmp_path, opts):
+    rec = quiet(xrun.run_one, split3.root, "lgbm", {**LGB_SMALL, "es_metric": "loss", **opts},
+                "g", tmp_path)
+    assert rec["report"]["windows"]["val"]["COR_mean"] > 0.2
+    assert rec["fit_info"]["holdout_loss"] is not None
+    if opts.get("loss") == "huber":
+        assert rec["resolved_config"]["params"]["objective"] == "huber"
+
+
+@pytest.mark.parametrize("model,cfg", [
+    ("mlp", {"hidden": [8], "es_days": 5, "max_epochs": 2, "threads": 1, "es_metric": "loss"}),
+    ("lgbm", {**LGB_SMALL, "es_metric": "loss"}),
+])
+def test_target_option_defaults_unchanged(split3, tmp_path, model, cfg):
+    """Explicit defaults == not passing them, and old records group with new ones."""
+    a = quiet(xrun.run_one, split3.root, model, cfg, "a", tmp_path)
+    b = quiet(xrun.run_one, split3.root, model, {**cfg, "loss": "mse", "huber_delta": 1.0,
+              "y_clip": 0.0, "weight_power": 1.0}, "b", tmp_path)
+    assert a["report"]["daily_APS_bps"] == b["report"]["daily_APS_bps"]
+    new = ("loss", "huber_delta", "y_clip", "weight_power")
+    old = dict(a, name="old", resolved_config={k: v for k, v in a["resolved_config"].items()
+                                                if k not in new})
+    (tmp_path / "old").mkdir()
+    (tmp_path / "old" / "record.json").write_text(json.dumps(old))
+    rows, _ = xtable.build_config_table(tmp_path)
+    assert {r["runs"] for r in rows} == {"a, b, old"}
+
+
+def test_weighted_loss_and_weight_power():
+    import torch
+
+    from models.mlp import train_weights, weighted_loss
+    rng = np.random.default_rng(0)
+    p, t, w = rng.normal(size=50), 3 * rng.normal(size=50), rng.uniform(0, 2, 50)
+    assert weighted_loss(p, t, w, "mse", 1.0) == pytest.approx(np.sum(w * (p - t) ** 2) / w.sum())
+    hub = torch.nn.functional.huber_loss(torch.tensor(p), torch.tensor(t), reduction="none",
+                                         delta=1.5).numpy()
+    assert weighted_loss(p, t, w, "huber", 1.5) == pytest.approx(np.sum(w * hub) / w.sum())
+    w[:5] = 0.0
+    assert train_weights(w, 1.0) is w
+    np.testing.assert_array_equal(train_weights(w, 0.0), (w > 0).astype(float))
+    np.testing.assert_allclose(train_weights(w, 0.5), np.sqrt(w))
+
+
+def test_metric_study_matches_kit_aps(split3, tmp_path):
+    from experiment import metric_study
+    res, other = tmp_path / "res", tmp_path / "other"
+    for out in (res, other):
+        quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5}, "ridge_es", out)
+        for lam in (1.0, 10.0, 100.0):
+            quiet(xrun.run_one, split3.root, "ridge", {"es_days": 5, "lam": lam}, f"r{lam:g}", out)
+    rep = metric_study.study(split3.root, res, baseline="ridge_es", other=str(other))
+    assert rep["n_configs"] == 4 and rep["n_shared_with_other"] == 4
+    for c in rep["configs"]:
+        rec = json.loads((res / c["runs"] / "record.json").read_text())
+        assert c["APS"] == pytest.approx(rec["report"]["windows"]["val"]["APS_mean_bps"], rel=1e-6)
+        assert c["COR"] == pytest.approx(rec["report"]["windows"]["val"]["COR_mean"], rel=1e-6)
+    aps = next(r for r in rep["measures"] if r["measure"] == "APS")
+    assert aps["rank_corr_APS"] == pytest.approx(1.0)
+    assert aps["xwin_rank_corr"] == pytest.approx(1.0)  # same runs on both "windows"
+    assert "rank corr with other window" in metric_study.to_markdown(rep)

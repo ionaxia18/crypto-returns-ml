@@ -232,6 +232,23 @@ Built from saved predictions with `experiment/combine.py` (`experiments/combos_v
 - **Implication**: per-instrument or regime-dependent weights are a natural
   next combination to test.
 
+### 5.6 The MLP mostly repeats ridge; its large-move edge varies by period — *High*
+- **Evidence** (analysis with the 2-layer MLP, seeds averaged; W1 / W2):
+  - Prediction correlation: ridge~MLP 0.79 / 0.83, ridge~LightGBM 0.54 / 0.57,
+    MLP~LightGBM 0.63 / 0.65. LightGBM is the model that brings new information.
+  - Gain over ridge on the largest 10% of moves: MLP +0.42 / -0.07 vs LightGBM
+    +0.31 / +0.36. On the other 90% the MLP is slightly better than ridge on both
+    windows (+0.01 to +0.03 in total); LightGBM slightly worse.
+  - Volatile days: MLP +0.27 / -0.09 vs ridge; LightGBM positive on mid/high days
+    in both windows.
+  - The MLP disagrees with ridge on direction on ~14% of rows (LightGBM ~25%);
+    on those rows it is clearly right on W1 (+0.29), about even on W2 (+0.04).
+  - Adding the MLP to ridge + LightGBM helps the largest-move rows on W1 (+0.42 vs
+    +0.33) and hurts them on W2 (+0.24 vs +0.35).
+- **Why it matters**: explains the MLP's window-dependence (1.2, 5.3) — it hinges
+  on whether it catches a period's large moves — and why ridge + LightGBM is the
+  most consistent combination.
+
 ## 6. Rolling (official) evaluation
 
 ### 6.1 MLP over 731 days: behind the official ridge, but on unequal data — *Medium*

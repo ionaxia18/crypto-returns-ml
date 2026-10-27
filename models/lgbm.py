@@ -20,6 +20,12 @@
   ``base_lam``) on the same fit rows first and start boosting from its
   predictions (LightGBM ``init_score``), so the trees learn only the
   nonlinear corrections. Prediction = ridge + trees. Default ``"none"``.
+- Training target and loss (defaults = the original weighted squared error),
+  as models/mlp.py: ``loss="huber"`` (LightGBM's huber objective, threshold
+  ``huber_delta`` in units of rms_w(y)), ``y_clip`` > 0 clips the training
+  target at +-``y_clip`` rms_w(y), ``weight_power`` trains with weights w**p.
+  With ``es_metric="loss"`` the holdout is scored with the same loss, clipped
+  target and weights; holdout APS always uses the raw y and w.
 
 Kit path (``fit(train)``) draws ``train.sample(train.row_budget, seed)``;
 that sample is date-ordered but carries no date labels, so the holdout is
@@ -110,11 +116,17 @@ def pooled_aps(pred, y, w):
     return awy / np.sqrt(max(awa, 1e-24)) / np.sqrt(max(float(w.sum()), 1e-24))
 
 
+def train_weights(w, power):
+    """w**power on positive weights; zero-weight rows stay zero (0**0 would be 1)."""
+    return w if power == 1.0 else np.where(w > 0, np.abs(w) ** power, 0.0)
+
+
 class MyModel:
     def __init__(self, max_rows=0, num_boost_round=2000,
                  early_stopping_rounds=100, es_days=14, embargo_days=1,
                  es_frac=0.1, threads=0, seed=0, es_metric="aps", base="none",
-                 base_lam=0.01, log_every=0, **params):
+                 base_lam=0.01, log_every=0, loss="mse", huber_delta=1.0, y_clip=0.0,
+                 weight_power=1.0, **params):
         self.max_rows = int(max_rows)
         self.num_boost_round = int(num_boost_round)
         self.early_stopping_rounds = int(early_stopping_rounds)
@@ -132,7 +144,15 @@ class MyModel:
         self.base = base
         self.base_lam = float(base_lam)
         self.log_every = int(log_every)  # print holdout score every N trees (0 = silent)
+        if loss not in ("mse", "huber"):
+            raise ValueError(f"loss must be mse|huber, got {loss!r}")
+        self.loss = loss
+        self.huber_delta = float(huber_delta)
+        self.y_clip = float(y_clip)
+        self.weight_power = float(weight_power)
         self.params = {**PARAMS, **params}
+        if loss == "huber":
+            self.params.update(objective="huber", alpha=self.huber_delta)
 
     def fit(self, train):
         X, y, w = train.sample(train.row_budget, seed=self.seed)
@@ -148,7 +168,12 @@ class MyModel:
         w = np.asarray(w, dtype=np.float64)
         self.y_scale = float(np.sqrt(np.sum(w[:fit_end] * y[:fit_end] ** 2)
                                      / np.sum(w[:fit_end])))
-        w_scale = float(w[:fit_end].mean())
+        # Training target and weights; holdout APS (aps_eval) uses raw y, w.
+        y_t = y / self.y_scale
+        if self.y_clip > 0:
+            y_t = np.clip(y_t, -self.y_clip, self.y_clip)
+        w_t = train_weights(w, self.weight_power)
+        w_scale = float(w_t[:fit_end].mean())
 
         if self.max_rows and fit_end > self.max_rows:
             rng = np.random.default_rng(self.seed)
@@ -168,13 +193,14 @@ class MyModel:
             init_fit = linear_pred(Xf, self.beta) / self.y_scale
             init_hold = linear_pred(Xh, self.beta) / self.y_scale
 
+        loss_metric = "huber" if self.loss == "huber" else "l2"
         params = {**self.params, "num_threads": self.threads, "seed": self.seed,
                   "deterministic": True, "force_row_wise": True,
-                  "metric": "None" if self.es_metric == "aps" else "l2"}
-        dtrain = lgb.Dataset(Xf, label=y[idx] / self.y_scale, weight=w[idx] / w_scale,
+                  "metric": "None" if self.es_metric == "aps" else loss_metric}
+        dtrain = lgb.Dataset(Xf, label=y_t[idx], weight=w_t[idx] / w_scale,
                              init_score=init_fit,
                              params={"max_bin": params["max_bin"]}, free_raw_data=True)
-        dhold = lgb.Dataset(Xh, label=yh / self.y_scale, weight=wh / w_scale,
+        dhold = lgb.Dataset(Xh, label=y_t[hold_start:], weight=w_t[hold_start:] / w_scale,
                             init_score=init_hold, reference=dtrain)
 
         def aps_eval(preds, data):  # preds include init_score on the holdout
@@ -201,7 +227,7 @@ class MyModel:
             "es_metric": self.es_metric,
             "base": self.base,
             "holdout_aps_bps": pooled_aps(hold_pred, yh, wh) * 1e4,
-            "holdout_loss": float(best["l2"]) if "l2" in best else None,
+            "holdout_loss": float(best[loss_metric]) if loss_metric in best else None,
             "y_scale": self.y_scale,
         }
 

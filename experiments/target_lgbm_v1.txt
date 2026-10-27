@@ -1,0 +1,21 @@
+# Target / loss study, LightGBM (smaller check; both windows, 3 seeds; baseline ridge_eqall).
+# Same question as experiments/target_mlp_v1.txt. Trees are less sensitive to
+# tails (a large move shifts one leaf's average, it does not drive the whole
+# fit), so fewer variants. Every run = lr 0.02, 15 leaves, stop on holdout loss
+# with ONE change; reference already run: lgb_leaves15_s* (both windows).
+# 3 configs x 3 seeds = 9 runs per window, ~1 h each.
+#
+#   scripts/submit_experiment.sh experiments/target_lgbm_v1.txt
+#   SPLIT=$SCRATCH/core980-work/experiment/v3_52w_jan24 scripts/submit_experiment.sh experiments/target_lgbm_v1.txt
+# --- Huber loss, delta 2 ---
+tgt_lgb_huber2_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "loss": "huber", "huber_delta": 2.0, "seed": 0}
+tgt_lgb_huber2_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "loss": "huber", "huber_delta": 2.0, "seed": 1}
+tgt_lgb_huber2_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "loss": "huber", "huber_delta": 2.0, "seed": 2}
+# --- Clipped training target at +-3 rms ---
+tgt_lgb_yclip3_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "y_clip": 3.0, "seed": 0}
+tgt_lgb_yclip3_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "y_clip": 3.0, "seed": 1}
+tgt_lgb_yclip3_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "y_clip": 3.0, "seed": 2}
+# --- Weights sqrt(w) ---
+tgt_lgb_wpow05_s0  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "weight_power": 0.5, "seed": 0}
+tgt_lgb_wpow05_s1  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "weight_power": 0.5, "seed": 1}
+tgt_lgb_wpow05_s2  lgbm  {"max_rows": 0, "num_boost_round": 10000, "early_stopping_rounds": 200, "learning_rate": 0.02, "es_metric": "loss", "num_leaves": 15, "weight_power": 0.5, "seed": 2}
