@@ -21,17 +21,22 @@ import numpy as np
 REPO = Path(__file__).resolve().parent.parent
 WINDOWS = {"W1": "v2_52w", "W2": "v3_52w_jan24"}
 
-# label, run glob per window (None = not run there), rolling run dir (None = no plan)
+# label, run glob per window (None = not run there), rolling run dir (None = not planned)
 MODELS = [
     ("Ridge (official)", {"W1": "ridge_eqall", "W2": "ridge_eqall"}, "runs/linear_4w"),
     ("Linear MLP", {"W1": "lin2_lr3e-5_con_ema_loss_s*", "W2": "lin_ema_s*"}, "runs/mlplin_4w"),
     ("2-layer MLP", {"W1": "ladder_h256x128_s*", "W2": "h256x128_s*"}, "runs/mlp2_4w"),
-    ("LightGBM", {"W1": "lgb_lr01_loss_s*", "W2": "lgb_lr01_loss_s*"}, "runs/lgbm3k_4w"),
-    ("Ridge + LightGBM", {"W1": "cmb_ridge_lgb", "W2": "cmb_ridge_lgb"}, "runs/cmb_ridge_lgb_4w"),
-    ("Linear MLP + LightGBM", {"W1": "cmb_mlplin_lgb", "W2": "cmb_mlplin_lgb"},
-     "runs/cmb_mlplin_lgb_4w"),
-    ("Ridge + LightGBM + MLP", {"W1": "cmb_ridge_lgb_mlp2", "W2": "cmb_ridge_lgb_mlp2"},
-     "runs/cmb_ridge_lgb_mlp2_4w"),
+    # 63 leaves / lr 0.01 was too slow for the rolling run (FINDINGS 6.2), so the
+    # official LightGBM and its combinations use 15 leaves / lr 0.02.
+    ("LightGBM, 63 leaves (lr 0.01)", {"W1": "lgb_lr01_loss_s*", "W2": "lgb_lr01_loss_s*"}, None),
+    ("LightGBM, 15 leaves (lr 0.02)", {"W1": "lgb_leaves15_s*", "W2": "lgb_leaves15_s*"},
+     "runs/lgbm15_4w"),
+    ("Ridge + LightGBM", {"W1": "cmb_ridge_lgb15", "W2": "cmb_ridge_lgb15"},
+     "runs/cmb_ridge_lgb15_4w"),
+    ("Linear MLP + LightGBM", {"W1": "cmb_mlplin_lgb15", "W2": "cmb_mlplin_lgb15"},
+     "runs/cmb_mlplin_lgb15_4w"),
+    ("Ridge + LightGBM + MLP", {"W1": "cmb_ridge_lgb15_mlp2", "W2": "cmb_ridge_lgb15_mlp2"},
+     "runs/cmb_ridge_lgb15_mlp2_4w"),
 ]
 
 COLUMNS = ["Model", "W1 APS", "W2 APS", "Rolling APS", "Sharpe", "COR %", "AR",
@@ -73,7 +78,7 @@ def build(repo: Path = REPO, models=MODELS) -> tuple[list[dict], str]:
             row[f"{w} APS"] = None if aps is None else (f"{aps:.2f}" + (f" ({n} seeds)" if n > 1 else ""))
         m = rolling_metrics(repo / run) if run else None
         if m is None:
-            row.update({c: "pending" for c in COLUMNS[3:]})
+            row.update({c: "pending" if run else "not run" for c in COLUMNS[3:]})
         else:
             periods.add((m["period"], m["days"]))
             row.update({"Rolling APS": f"{m['APS']:.2f}", "Sharpe": f"{m['SR']:.1f}",
@@ -86,7 +91,7 @@ def build(repo: Path = REPO, models=MODELS) -> tuple[list[dict], str]:
     lines = ["# Overall evaluation", "",
              "W1 = val 2024-04-09..05-06, W2 = val 2024-01-16..02-12 (28 days each, "
              "52 weeks of training, stride 5, identical rows; single models averaged "
-             "over seeds, combinations of seed-averaged parts).",
+             "over seeds, combinations of seed-averaged parts; LightGBM in combinations = 15 leaves).",
              f"Rolling = official kit evaluation, 104-week training, 4-week refit, {period}; "
              "one seed, ~10M sampled rows per anchor (ridge uses all rows); paired "
              "columns vs the official ridge (`runs/linear_4w`) on the same days.", "",

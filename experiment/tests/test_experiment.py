@@ -659,3 +659,22 @@ def test_metric_study_matches_kit_aps(split3, tmp_path):
     assert aps["rank_corr_APS"] == pytest.approx(1.0)
     assert aps["xwin_rank_corr"] == pytest.approx(1.0)  # same runs on both "windows"
     assert "rank corr with other window" in metric_study.to_markdown(rep)
+
+
+def test_lgbm_timed_log_prints_elapsed(split3, tmp_path, capsys):
+    rec = xrun.run_one(split3.root, "lgbm", {**LGB_SMALL, "es_metric": "loss", "log_every": 10},
+                       "g", tmp_path)
+    out = capsys.readouterr().out
+    assert "[10]\tholdout's l2:" in out and " min)" in out
+    assert rec["report"]["windows"]["val"]["COR_mean"] > 0.2
+
+
+def test_lgbm_fast15_runs_through_the_kit(data_root, tmp_path):
+    from experiment import rolling
+    from models.lgbm_final import Fast15
+    m = Fast15()
+    assert (m.params["num_leaves"], m.params["learning_rate"], m.es_metric) == (15, 0.02, "loss")
+    quiet(rolling.run_part, data_root, f"{REPO}/models/lgbm_final.py:Fast15", tmp_path / "g", 2,
+          row_budget=3_000)
+    man = json.loads(next((tmp_path / "g" / "parts").glob("*/run_manifest.json")).read_text())
+    assert man["predictions"] and man["model_spec"].endswith(":Fast15")

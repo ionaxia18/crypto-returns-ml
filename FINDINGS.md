@@ -261,6 +261,24 @@ Built from saved predictions with `experiment/combine.py` (`experiments/combos_v
 - **What it does show**: 2-layer beats linear over two years on identical data
   (3.4). Each rolling fit took ~4 h, mostly reading the 10M-row sample.
 
+### 6.2 The best window LightGBM is too slow for the rolling run — *High* (cost), result pending
+- **Evidence**: lr 0.01 / 63 leaves, capped at 3000 trees, 16 CPUs, 10M sampled
+  rows: 22 of 27 anchors hit the 12 h limit. The first anchor (390 dates of
+  history) finished in 3.7 h at ~1400 trees; a full 104-week anchor reached only
+  ~1200 trees in 12 h with the holdout loss still falling. An uncapped attempt
+  (20000 trees) also timed out at 10 h.
+- **Why (partly open)**: low learning rates need many trees, and each tree here
+  cost ~5x the experiment runs' per-tree time. The logs had no timestamps, so
+  sampling vs tree building is not yet separated; LightGBM log lines now carry
+  elapsed minutes.
+- **Decision**: the official LightGBM is 15 leaves at lr 0.02
+  (`models/lgbm_final.py:Fast15`): roughly half the trees, cheaper trees, and
+  within noise of 63 leaves on the windows (1.87 / 1.94 vs 1.87 / 2.01; 4.5).
+  Its combinations are rebuilt on the windows with the 15-leaf parts so each
+  model is the same in the window and rolling columns.
+- **Lesson**: estimate the rolling cost from one full-length anchor before
+  submitting all 27.
+
 ---
 
 ## Open questions

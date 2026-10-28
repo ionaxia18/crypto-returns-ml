@@ -22,6 +22,17 @@ Kit-path specifics (as models/mlp_final.py):
   every 200 trees so a slow anchor is visible in its log.
 
     scripts/submit_rolling.sh models/lgbm_final.py:Best runs/lgbm3k_4w --time=12:00:00
+
+Best was still too slow for the rolling run: on the full 104-week window an
+anchor fit only ~1200 trees in 12 h (anchor 5) while the holdout loss was still
+improving, and 22 of 27 anchors timed out. Fast15 is the cheaper setting for the
+official run: 15 leaves at learning rate 0.02 (the tree-complexity ladder,
+FINDINGS.md 4.2), which needs about half the trees and builds each one faster.
+On the windows it scores 1.87 / 1.94 vs Best's 1.87 / 2.01 (tied with 63 leaves
+in round 2, FINDINGS.md 4.5). Log lines carry elapsed minutes, so the
+sampling and tree-building times of each anchor are visible.
+
+    scripts/submit_rolling.sh models/lgbm_final.py:Fast15 runs/lgbm15_4w --time=12:00:00
 """
 
 import sys
@@ -38,3 +49,12 @@ class Best(_LGBM):
         super().__init__(max_rows=0, num_boost_round=3000, early_stopping_rounds=200,
                          es_frac=0.02, seed=0, learning_rate=0.01, es_metric="loss",
                          log_every=200)
+
+
+class Fast15(_LGBM):
+    """lr 0.02, stop on holdout loss, 15 leaves, all sampled rows, <= 3000 trees, seed 0."""
+
+    def __init__(self):
+        super().__init__(max_rows=0, num_boost_round=3000, early_stopping_rounds=200,
+                         es_frac=0.02, seed=0, learning_rate=0.02, num_leaves=15,
+                         es_metric="loss", log_every=200)

@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 
 import numpy as np
 
@@ -116,6 +117,18 @@ def pooled_aps(pred, y, w):
     return awy / np.sqrt(max(awa, 1e-24)) / np.sqrt(max(float(w.sum()), 1e-24))
 
 
+def timed_log(every, t0):
+    """LightGBM callback: holdout score every ``every`` trees, with minutes since t0."""
+    def callback(env):
+        it = env.iteration + 1
+        if it % every == 0 and env.evaluation_result_list:
+            data, metric, value = env.evaluation_result_list[0][:3]
+            print(f"[{it}]\t{data}'s {metric}: {value:g}\t({(time.time() - t0) / 60:.1f} min)",
+                  flush=True)
+    callback.order = 10
+    return callback
+
+
 def train_weights(w, power):
     """w**power on positive weights; zero-weight rows stay zero (0**0 would be 1)."""
     return w if power == 1.0 else np.where(w > 0, np.abs(w) ** power, 0.0)
@@ -155,7 +168,11 @@ class MyModel:
             self.params.update(objective="huber", alpha=self.huber_delta)
 
     def fit(self, train):
+        t0 = time.time()
         X, y, w = train.sample(train.row_budget, seed=self.seed)
+        if self.log_every:
+            print(f"sampled {X.shape[0]:,} rows x {X.shape[1]} features in "
+                  f"{(time.time() - t0) / 60:.1f} min", flush=True)
         self.fit_arrays(X, y, w, date_idx=None)
 
     def fit_arrays(self, X, y, w, date_idx=None):
@@ -211,7 +228,7 @@ class MyModel:
             valid_sets=[dhold], valid_names=["holdout"],
             feval=aps_eval if self.es_metric == "aps" else None,
             callbacks=[lgb.early_stopping(self.early_stopping_rounds, verbose=False)]
-            + ([lgb.log_evaluation(self.log_every)] if self.log_every else []),
+            + ([timed_log(self.log_every, time.time())] if self.log_every else []),
         )
         self.best_iteration = int(self.booster.best_iteration or self.num_boost_round)
         best = self.booster.best_score["holdout"]

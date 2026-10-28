@@ -132,6 +132,31 @@
         "lgb": 1
       },
       "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb15",
+      "parts": {
+        "ridge": 1,
+        "lgb15": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_mlplin_lgb15",
+      "parts": {
+        "mlplin": 1,
+        "lgb15": 1
+      },
+      "norm": "rms"
+    },
+    {
+      "name": "cmb_ridge_lgb15_mlp2",
+      "parts": {
+        "ridge": 1,
+        "lgb15": 1,
+        "mlp2": 1
+      },
+      "norm": "rms"
     }
   ]
 }
